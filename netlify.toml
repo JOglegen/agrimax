@@ -1,0 +1,11 @@
+# netlify.toml — place this in the ROOT of your repo
+
+[build]
+  functions = "netlify/functions"
+
+# Route /ml-proxy/* so the path suffix reaches event.path inside the function
+[[redirects]]
+  from   = "/.netlify/functions/ml-proxy/*"
+  to     = "/.netlify/functions/ml-proxy/:splat"
+  status = 200
+  force  = true
