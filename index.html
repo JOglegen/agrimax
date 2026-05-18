@@ -3,18 +3,21 @@
 <head>
 <script>
 (async function jdCallbackHandler(){
-  if(window.location.pathname !== '/callback') return;
-  const SUPABASE_URL = 'https://dkmfjtfdfuuouhcuhoer.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_wSJWe5ieVE7vXFnRKtUjcw_6K_V74z8';
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
   const state = params.get('state');
+  if(!code || !state) return;
+  try {
+    const decoded = JSON.parse(atob(state));
+    if(!decoded.org_id) return;
+  } catch(_) { return; }
+  const SUPABASE_URL = 'https://dkmfjtfdfuuouhcuhoer.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_wSJWe5ieVE7vXFnRKtUjcw_6K_V74z8';
   const errorMsg = params.get('error');
   document.documentElement.innerHTML = '<!DOCTYPE html><html><head><meta charset=UTF-8><style>body{font-family:Segoe UI,system-ui,sans-serif;background:#1e5631;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.box{background:#fff;border-radius:16px;padding:36px 32px;max-width:380px;width:100%;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,.3)}h2{color:#1e5631;margin-bottom:8px;font-size:20px}p{color:#5a6b52;font-size:13px}.spinner{width:32px;height:32px;border:3px solid #e8f4e8;border-top-color:#1e5631;border-radius:50%;animation:spin 0.8s linear infinite;margin:16px auto}@keyframes spin{to{transform:rotate(360deg)}}.err{color:#922b21;background:#fdecea;border:1px solid #f5b7b1;border-radius:8px;padding:10px;font-size:12px;margin-top:12px}</style></head><body><div class=box><h2>Connecting John Deere</h2><div class=spinner></div><p id=msg>Exchanging authorization code...</p><div id=err></div></div></body></html>';
   function setMsg(t){ document.getElementById('msg').textContent=t; }
   function setErr(t){ document.getElementById('err').innerHTML='<div class=err>'+t+'</div>'; document.getElementById('msg').textContent='Connection failed.'; }
   if(errorMsg){ setErr('John Deere error: '+errorMsg); setTimeout(()=>location.href='/',4000); return; }
-  if(!code){ setErr('No authorization code received.'); setTimeout(()=>location.href='/',4000); return; }
   try {
     setMsg('Storing connection...');
     const res = await fetch(SUPABASE_URL+'/functions/v1/jdoc_auth',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY},body:JSON.stringify({action:'exchange_code',code,state})});
@@ -5868,18 +5871,21 @@ async function surfRender(){
              minLng: minLng - padLng, maxLng: maxLng + padLng };
   }
 
-  const TARGET = 150;
+  const cellSizeM = parseFloat($("surf-cellsize")?.value || "5");
+  const M_PER_DEG_LAT_SURF = 111320;
+  const midLat = (bbox.minLat + bbox.maxLat) / 2;
+  const mPerDegLng = M_PER_DEG_LAT_SURF * Math.cos(midLat * Math.PI / 180);
   const dLat = bbox.maxLat - bbox.minLat;
   const dLng = bbox.maxLng - bbox.minLng;
-  const latToLngRatio = Math.cos((bbox.minLat + bbox.maxLat) / 2 * Math.PI / 180);
-  const aspect = (dLng * latToLngRatio) / dLat;
-  let cols, rows;
-  if(aspect >= 1){
-    cols = TARGET;
-    rows = Math.max(20, Math.round(TARGET / aspect));
-  } else {
-    rows = TARGET;
-    cols = Math.max(20, Math.round(TARGET * aspect));
+  const stepLat = cellSizeM / M_PER_DEG_LAT_SURF;
+  const stepLng = cellSizeM / mPerDegLng;
+  const MAX_CELLS = 600;
+  const cols = Math.max(10, Math.min(MAX_CELLS, Math.ceil(dLng / stepLng)));
+  const rows = Math.max(10, Math.min(MAX_CELLS, Math.ceil(dLat / stepLat)));
+  if(cols === MAX_CELLS || rows === MAX_CELLS){
+    const effectiveM = Math.max(dLat / MAX_CELLS * M_PER_DEG_LAT_SURF, dLng / MAX_CELLS * mPerDegLng);
+    $("surf-status").textContent = `⚠ Field too large for ${cellSizeM}m cells — using ~${Math.round(effectiveM)}m effective cell size. Select a coarser resolution to improve accuracy.`;
+    await new Promise(r => setTimeout(r, 10));
   }
 
   const canvas = document.createElement("canvas");
@@ -5958,7 +5964,7 @@ async function surfRender(){
   surfRefreshLabels();
 
   const ms = Math.round(performance.now() - t0);
-  $("surf-status").textContent = `${def.label} · ${points.length} samples · grid ${cols}×${rows} · ${cellsInside.toLocaleString()} cells in field · ${ms} ms`;
+  $("surf-status").textContent = `${def.label} · ${points.length} samples · ${cellSizeM}m cells · grid ${cols}×${rows} · ${cellsInside.toLocaleString()} cells in field · ${ms} ms`;
 }
 
 function surfClearLabels(){
@@ -23072,11 +23078,32 @@ async function jdImportSelected(){
   const checkboxes = document.querySelectorAll('[id^="jdf-"]:checked');
   if(checkboxes.length === 0) { alert('No fields selected.'); return; }
 
+  // Resolve retailer_id the same way shapefile import does —
+  // use the only retailer, or prompt if multiple exist.
+  if(DATA.retailers.length === 0){
+    alert('You need at least one retailer set up first. Go to Settings → Retailers to add one.');
+    return;
+  }
+  let defaultRetailerId = DATA.retailers[0].id;
+  if(DATA.retailers.length > 1){
+    const list = DATA.retailers.map((r,i) => `${i+1}. ${r.name}`).join('\n');
+    const pick = prompt(`Multiple retailers exist. Enter the number to attach new growers to:\n\n${list}`, '1');
+    const idx = parseInt(pick) - 1;
+    if(isNaN(idx) || idx < 0 || idx >= DATA.retailers.length){
+      alert('Import cancelled.'); return;
+    }
+    defaultRetailerId = DATA.retailers[idx].id;
+  }
+
   const resultsDiv = $('jd-import-results');
   resultsDiv.innerHTML = '<div class="card"><div style="text-align:center;padding:20px;color:var(--tx3);font-size:12px">⏳ Importing ' + checkboxes.length + ' field(s)...</div></div>';
 
   let imported = 0, skipped = 0;
   const errors = [];
+
+  // Track growers/farms created in this batch to avoid duplicates
+  const createdGrowers = {}; // name → id
+  const createdFarms   = {}; // "growerId|name" → id
 
   for(const cb of checkboxes) {
     const idx = parseInt(cb.dataset.idx);
@@ -23084,36 +23111,50 @@ async function jdImportSelected(){
     if(!jdField) continue;
 
     try {
-      // Find or create grower
-      let grower = DATA.growers.find(function(g){ return g.name === jdField.jd_org_name; });
-      if(!grower) {
-        const ins = await supa.from('growers')
-          .insert({ name: jdField.jd_org_name, retailer_id: CURRENT_RETAILER_ID, org_id: ORG_ID })
-          .select().single();
-        if(ins.error) { errors.push(jdField.field_name + ': ' + ins.error.message); continue; }
-        grower = ins.data;
-        DATA.growers.push(grower);
+      // ── Grower ──
+      const gname = jdField.jd_org_name;
+      let growerId = createdGrowers[gname];
+      if(!growerId){
+        const existing = DATA.growers.find(g => g.name === gname && g.retailer_id === defaultRetailerId);
+        if(existing){
+          growerId = existing.id;
+        } else {
+          const ins = await supa.from('growers')
+            .insert({ name: gname, retailer_id: defaultRetailerId, org_id: ORG_ID })
+            .select().single();
+          if(ins.error){ errors.push(jdField.field_name + ' (grower): ' + ins.error.message); continue; }
+          growerId = ins.data.id;
+          DATA.growers.push(ins.data);
+        }
+        createdGrowers[gname] = growerId;
       }
 
-      // Find or create farm
+      // ── Farm ──
       const farmName = jdField.farm_name || jdField.jd_org_name;
-      let farm = DATA.farms.find(function(f){ return f.grower_id === grower.id && f.name === farmName; });
-      if(!farm) {
-        const ins = await supa.from('farms')
-          .insert({ name: farmName, grower_id: grower.id, org_id: ORG_ID })
-          .select().single();
-        if(ins.error) { errors.push(jdField.field_name + ' farm: ' + ins.error.message); continue; }
-        farm = ins.data;
-        DATA.farms.push(farm);
+      const farmKey  = growerId + '|' + farmName;
+      let farmId = createdFarms[farmKey];
+      if(!farmId){
+        const existing = DATA.farms.find(f => f.grower_id === growerId && f.name === farmName);
+        if(existing){
+          farmId = existing.id;
+        } else {
+          const ins = await supa.from('farms')
+            .insert({ name: farmName, grower_id: growerId, org_id: ORG_ID })
+            .select().single();
+          if(ins.error){ errors.push(jdField.field_name + ' (farm): ' + ins.error.message); continue; }
+          farmId = ins.data.id;
+          DATA.farms.push(ins.data);
+        }
+        createdFarms[farmKey] = farmId;
       }
 
-      // Skip if field already exists
-      const exists = DATA.fields.find(function(f){ return f.farm_id === farm.id && f.name === jdField.field_name; });
-      if(exists) { skipped++; continue; }
+      // ── Field — skip if already exists ──
+      const exists = DATA.fields.find(f => f.farm_id === farmId && f.name === jdField.field_name);
+      if(exists){ skipped++; continue; }
 
-      // Parse boundary
+      // ── Boundary ──
       let boundaryGeoJSON = null;
-      if(jdField.boundary_geojson) {
+      if(jdField.boundary_geojson){
         try {
           boundaryGeoJSON = typeof jdField.boundary_geojson === 'string'
             ? JSON.parse(jdField.boundary_geojson)
@@ -23122,16 +23163,16 @@ async function jdImportSelected(){
       }
 
       const fieldInsert = {
-        name: jdField.field_name,
-        farm_id: farm.id,
-        org_id: ORG_ID,
-        acres: jdField.acres,
-        notes: 'Imported from John Deere (ID: ' + jdField.jd_field_id + ')',
+        name:    jdField.field_name,
+        farm_id: farmId,
+        org_id:  ORG_ID,
+        acres:   jdField.acres,
+        notes:   'Imported from John Deere (ID: ' + jdField.jd_field_id + ')',
       };
       if(boundaryGeoJSON) fieldInsert.boundary_geojson = boundaryGeoJSON;
 
       const ins = await supa.from('fields').insert(fieldInsert).select().single();
-      if(ins.error) { errors.push(jdField.field_name + ': ' + ins.error.message); continue; }
+      if(ins.error){ errors.push(jdField.field_name + ': ' + ins.error.message); continue; }
       DATA.fields.push(ins.data);
       imported++;
 
@@ -23140,12 +23181,14 @@ async function jdImportSelected(){
     }
   }
 
-  renderGrowerTree();
+  await loadAll();
+  renderTree();
 
   let html = '<div class="card"><div style="font-weight:700;font-size:13px;margin-bottom:8px">Import Complete</div><div style="font-size:12px;color:var(--tx3)">';
   if(imported > 0) html += '<div style="color:#1e5631">✓ ' + imported + ' field(s) imported</div>';
-  if(skipped > 0) html += '<div>⟳ ' + skipped + ' field(s) already existed (skipped)</div>';
+  if(skipped > 0)  html += '<div>⟳ ' + skipped + ' field(s) already existed (skipped)</div>';
   for(const e of errors) html += '<div style="color:#922b21">✗ ' + e + '</div>';
+  if(imported === 0 && skipped === 0 && errors.length === 0) html += '<div style="color:var(--tx3)">Nothing to import.</div>';
   html += '</div></div>';
   resultsDiv.innerHTML = html;
 }
