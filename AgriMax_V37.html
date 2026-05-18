@@ -20887,7 +20887,14 @@ function initDigitMap(existingBoundary){
   for(const f of DATA.fields){
     if(f.id === DIGIT.fieldId) continue;  // skip the field being edited
     if(f.boundary_geojson){
-      const layer = L.geoJSON(f.boundary_geojson, {
+      // V35 FIX: Validate GeoJSON before passing to Leaflet
+      let geojson = f.boundary_geojson;
+      try {
+        if(typeof geojson === 'string') geojson = JSON.parse(geojson);
+        if(!geojson || typeof geojson !== 'object') continue;
+        if(!geojson.type && !geojson.features && !geojson.geometry) continue;
+      } catch(e) { continue; }
+      const layer = L.geoJSON(geojson, {
         style: { color: "#1e5631", weight: 1.2, fillColor: "#3a8d4f", fillOpacity: 0.10, interactive: false }
       });
       layer.addTo(DIGIT.map);
@@ -20909,6 +20916,14 @@ function initDigitMap(existingBoundary){
   }
 
   // Set initial view
+  if(existingBoundary){
+    // V35 FIX: Validate existingBoundary before passing to Leaflet
+    try {
+      if(typeof existingBoundary === 'string') existingBoundary = JSON.parse(existingBoundary);
+      if(!existingBoundary || typeof existingBoundary !== 'object') existingBoundary = null;
+      if(existingBoundary && !existingBoundary.type && !existingBoundary.features && !existingBoundary.geometry) existingBoundary = null;
+    } catch(e) { existingBoundary = null; }
+  }
   if(existingBoundary){
     DIGIT.layer = L.geoJSON(existingBoundary, {
       style: { color: "#ffeb3b", weight: 3, fillColor: "#ffeb3b", fillOpacity: 0.15 }
