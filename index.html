@@ -2,487 +2,822 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgriMax V35 - GitHub Documentation</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>AgriMax V35 — Issues & Fixes Documentation</title>
     <style>
+        :root {
+            --gn: #1e5631;
+            --gn2: #14401e;
+            --gnbg: #e8f4e8;
+            --gnbd: #c8e0c8;
+            --bg: #f2f5ee;
+            --card: #fff;
+            --bdr: #dde3d5;
+            --tx: #1a2417;
+            --tx2: #5a6b52;
+            --tx3: #8a9a82;
+            --r: 8px;
+            --rl: 12px;
+            --wbg: #fef9e7;
+            --wc: #7d6608;
+            --wbd: #f9e79f;
+            --ebg: #fdecea;
+            --ec: #922b21;
+            --ebd: #f5b7b1;
+            --ibg: #eaf2fb;
+            --ic: #154360;
+            --ibd: #aed6f1;
+            --obg: #e6f4e6;
+            --oc: #1e5631;
+            --obd: #a9dfbf;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
-            background: linear-gradient(135deg, #f2f5ee 0%, #e8f4e8 100%);
-            color: #1a2417;
-            line-height: 1.6;
-        }
-        
-        .hero {
-            background: linear-gradient(135deg, #1e5631 0%, #14401e 100%);
-            color: white;
-            padding: 80px 20px;
-            text-align: center;
-        }
-        
-        .hero h1 {
-            font-size: 48px;
-            margin-bottom: 12px;
-            font-weight: 700;
-        }
-        
-        .hero p {
-            font-size: 18px;
-            opacity: 0.95;
-            margin-bottom: 30px;
-        }
-        
-        .hero-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        
-        .btn-large {
-            padding: 14px 28px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            display: inline-block;
-        }
-        
-        .btn-primary {
-            background: white;
-            color: #1e5631;
-            border: none;
-            cursor: pointer;
-        }
-        
-        .btn-primary:hover {
-            box-shadow: 0 8px 24px rgba(0,0,0,.15);
-            transform: translateY(-2px);
-        }
-        
-        .btn-secondary {
-            background: rgba(255,255,255,.2);
-            color: white;
-            border: 2px solid white;
-            cursor: pointer;
-        }
-        
-        .btn-secondary:hover {
-            background: white;
-            color: #1e5631;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 60px 20px;
-        }
-        
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            margin-bottom: 60px;
-        }
-        
-        .card {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 4px 12px rgba(0,0,0,.08);
-            transition: all 0.3s ease;
-            border-top: 4px solid;
-        }
-        
-        .card:hover {
-            box-shadow: 0 8px 24px rgba(0,0,0,.12);
-            transform: translateY(-4px);
-        }
-        
-        .card.issues { border-top-color: #1e5631; }
-        .card.fixes { border-top-color: #ff9500; }
-        .card.roadmap { border-top-color: #6BCB77; }
-        
-        .card h3 {
-            color: #1e5631;
-            margin-bottom: 12px;
-            font-size: 20px;
-        }
-        
-        .card p {
-            color: #5a6b52;
-            font-size: 14px;
-            margin-bottom: 16px;
-            line-height: 1.6;
-        }
-        
-        .card-link {
-            color: #1e5631;
-            text-decoration: none;
-            font-weight: 600;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--tx);
+            height: 100vh;
+            overflow: hidden;
             font-size: 13px;
-            display: inline-flex;
+        }
+        .app { display: flex; height: 100vh; }
+        .sidebar {
+            width: 250px;
+            background: var(--card);
+            border-right: 1px solid var(--bdr);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--bdr);
+            background: var(--gn);
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .nav-items {
+            padding: 8px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        .nav-item {
+            padding: 10px 12px;
+            margin-bottom: 4px;
+            border-radius: var(--r);
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s;
+            font-size: 12px;
+        }
+        .nav-item:hover {
+            background: var(--gnbg);
+            color: var(--gn);
+        }
+        .nav-item.active {
+            background: var(--gnbg);
+            color: var(--gn);
+            font-weight: 600;
+        }
+        .nav-section {
+            padding: 8px 12px 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--tx3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 8px;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .topbar {
+            background: var(--card);
+            border-bottom: 1px solid var(--bdr);
+            padding: 12px 20px;
+            display: flex;
             align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
+            justify-content: space-between;
+            flex-shrink: 0;
         }
-        
-        .card-link:hover {
-            gap: 12px;
+        .topbar-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--gn);
         }
-        
-        .card-icon {
-            font-size: 32px;
+        .topbar-subtitle {
+            font-size: 11px;
+            color: var(--tx3);
+        }
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .section { display: none; }
+        .section.active { display: block; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--bdr);
+            border-radius: var(--rl);
+            padding: 15px;
             margin-bottom: 12px;
         }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            margin-bottom: 40px;
-            box-shadow: 0 4px 12px rgba(0,0,0,.08);
+        .card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--tx);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        
+        .card-desc {
+            font-size: 12px;
+            color: var(--tx2);
+            margin-bottom: 8px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-critical { background: #ff6b6b; color: white; }
+        .badge-high { background: #ff9500; color: white; }
+        .badge-medium { background: #ffc107; color: #333; }
+        .badge-low { background: #6BCB77; color: white; }
+        .badge-bug { background: #ffe6e6; color: #c00000; }
+        .badge-feature { background: #e6f2ff; color: #0070c0; }
+        .code-block {
+            background: #1a2417;
+            color: #e8f4e8;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            margin: 8px 0;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .issue-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .issue-card {
+            background: var(--card);
+            border: 1px solid var(--bdr);
+            border-left: 4px solid;
+            border-radius: var(--r);
+            padding: 12px;
+        }
+        .issue-card.critical { border-left-color: #ff6b6b; }
+        .issue-card.high { border-left-color: #ff9500; }
+        .issue-card.medium { border-left-color: #ffc107; }
+        .issue-card.low { border-left-color: #6BCB77; }
+        .issue-number {
+            display: inline-block;
+            background: var(--gnbg);
+            color: var(--gn);
+            font-weight: bold;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 6px;
+        }
+        .note {
+            background: var(--obg);
+            border-left: 3px solid var(--oc);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: var(--wbg);
+            border-left: 3px solid var(--wc);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #5a4700;
+            margin: 10px 0;
+        }
+        .stat-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
         .stat {
+            background: var(--card);
+            border: 1px solid var(--bdr);
+            border-radius: var(--r);
+            padding: 12px;
             text-align: center;
         }
-        
         .stat-number {
-            font-size: 36px;
+            font-size: 24px;
             font-weight: bold;
-            color: #1e5631;
+            color: var(--gn);
             display: block;
             margin-bottom: 4px;
         }
-        
         .stat-label {
-            font-size: 12px;
-            color: #5a6b52;
+            font-size: 10px;
+            color: var(--tx2);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            font-weight: 600;
         }
-        
-        .section-title {
-            font-size: 28px;
-            color: #1e5631;
-            margin-bottom: 30px;
-            font-weight: 700;
+        .phase-box {
+            background: var(--card);
+            border: 1px solid var(--bdr);
+            border-radius: var(--r);
+            padding: 15px;
+            margin-bottom: 12px;
         }
-        
-        .timeline {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 4px 12px rgba(0,0,0,.08);
-        }
-        
-        .phase {
-            display: flex;
-            gap: 20px;
-            padding: 20px 0;
-            border-bottom: 1px solid #e0e5dc;
-        }
-        
-        .phase:last-child {
-            border-bottom: none;
-        }
-        
         .phase-badge {
-            background: #1e5631;
+            display: inline-block;
+            background: var(--gn);
             color: white;
-            padding: 12px 16px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 12px;
-            text-align: center;
-            min-width: 100px;
-            height: fit-content;
-        }
-        
-        .phase-content h4 {
-            color: #1a2417;
-            margin-bottom: 8px;
-            font-weight: 700;
-        }
-        
-        .phase-content p {
-            color: #5a6b52;
-            font-size: 13px;
-            margin-bottom: 10px;
-        }
-        
-        .issues-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        
-        .issue-tag {
-            background: #f0f4ec;
             padding: 4px 10px;
             border-radius: 4px;
             font-size: 11px;
-            color: #5a6b52;
-            font-weight: 600;
+            font-weight: bold;
+            margin-bottom: 8px;
         }
-        
-        .footer-nav {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            margin-top: 40px;
-            box-shadow: 0 4px 12px rgba(0,0,0,.08);
-        }
-        
-        .footer-nav h4 {
-            color: #1e5631;
-            margin-bottom: 15px;
-            font-weight: 700;
-        }
-        
-        .footer-nav a {
-            display: block;
-            color: #1e5631;
-            text-decoration: none;
-            font-size: 13px;
-            padding: 8px 0;
-            border-bottom: 1px solid #e8f4e8;
-            transition: color 0.3s;
-        }
-        
-        .footer-nav a:hover {
-            color: #ff9500;
-        }
-        
         footer {
-            background: #1a2417;
-            color: #8a9a82;
+            background: var(--gn);
+            color: white;
+            padding: 10px 20px;
             text-align: center;
-            padding: 40px 20px;
-            margin-top: 60px;
-            font-size: 12px;
+            font-size: 11px;
+            border-top: 1px solid var(--bdr);
         }
-        
-        footer a {
-            color: #e8f4e8;
-            text-decoration: none;
-        }
-        
-        footer a:hover {
-            text-decoration: underline;
-        }
-        
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 32px; }
-            .hero p { font-size: 14px; }
-            .cards-grid { grid-template-columns: 1fr; }
-            .hero-buttons { flex-direction: column; }
-            .btn-large { width: 100%; }
-        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--bdr); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--tx2); }
     </style>
 </head>
 <body>
 
-<div class="hero">
-    <h1>🌾 AgriMax V35</h1>
-    <p>Development Documentation & Issues Tracker</p>
-    <div class="hero-buttons">
-        <a href="issues.html" class="btn-large btn-primary">View Issues</a>
-        <a href="fixes.html" class="btn-large btn-primary">Code Fixes</a>
-        <a href="https://github.com/yourusername/agrimax" class="btn-large btn-secondary" target="_blank">GitHub Repo</a>
+<div class="app">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-header">🌾 AgriMax V35</div>
+        <div class="nav-items">
+            <div class="nav-section">Documentation</div>
+            <div class="nav-item active" onclick="showSection('overview')">📊 Overview</div>
+            <div class="nav-item" onclick="showSection('issues')">📋 All Issues (13)</div>
+            <div class="nav-item" onclick="showSection('roadmap')">🗺️ Roadmap</div>
+            
+            <div class="nav-section">Critical Issues</div>
+            <div class="nav-item" onclick="showSection('issue7')">🔴 #7 - WO Data Bug</div>
+            <div class="nav-item" onclick="showSection('issue2')">🔴 #2 - JD Boundaries</div>
+            
+            <div class="nav-section">High Priority</div>
+            <div class="nav-item" onclick="showSection('issue1')">🟠 #1 - Version Update</div>
+            <div class="nav-item" onclick="showSection('issue4')">🟠 #4 - Settings Nav</div>
+            <div class="nav-item" onclick="showSection('issue13')">🟠 #13 - Password Reset</div>
+            <div class="nav-item" onclick="showSection('issue3')">🟠 #3 - Delete Grower</div>
+            
+            <div class="nav-section">Medium Priority</div>
+            <div class="nav-item" onclick="showSection('issue5')">🟡 #5 - Search Digitize</div>
+            <div class="nav-item" onclick="showSection('issue6')">🟡 #6 - Search WO</div>
+            <div class="nav-item" onclick="showSection('issue8')">🟡 #8 - Recommendations</div>
+            <div class="nav-item" onclick="showSection('issue10')">🟡 #10 - Change PW</div>
+            <div class="nav-item" onclick="showSection('issue9')">🟡 #9 - RX Labels</div>
+            
+            <div class="nav-section">Low Priority</div>
+            <div class="nav-item" onclick="showSection('issue11')">🟢 #11 - Auto Collapse</div>
+            <div class="nav-item" onclick="showSection('issue12')">🟢 #12 - Samplers</div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+        <div class="topbar">
+            <div>
+                <div class="topbar-title">AgriMax V35 - Issues & Fixes</div>
+                <div class="topbar-subtitle">Development Documentation & Code Fixes Guide</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- OVERVIEW SECTION -->
+            <div id="overview" class="section active">
+                <h2 style="color: var(--gn); margin-bottom: 15px;">📊 Project Overview</h2>
+                
+                <div class="stat-box">
+                    <div class="stat">
+                        <span class="stat-number">13</span>
+                        <span class="stat-label">Total Issues</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">25-27</span>
+                        <span class="stat-label">Est. Hours</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">3</span>
+                        <span class="stat-label">Phases</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">2</span>
+                        <span class="stat-label">Critical</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🎯 Issues by Priority</div>
+                    <div style="padding: 8px 0;">
+                        <div style="margin: 8px 0;"><span class="badge badge-critical">Critical</span> <strong>2 issues</strong> - 4-5 hours</div>
+                        <div style="margin: 8px 0;"><span class="badge badge-high">High</span> <strong>4 issues</strong> - 4-5 hours</div>
+                        <div style="margin: 8px 0;"><span class="badge badge-medium">Medium</span> <strong>5 issues</strong> - 8-9 hours</div>
+                        <div style="margin: 8px 0;"><span class="badge badge-low">Low</span> <strong>2 issues</strong> - 2 hours</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📋 What's Included</div>
+                    <ul style="margin-left: 15px; font-size: 12px; line-height: 1.6;">
+                        <li>13 detailed issues with descriptions</li>
+                        <li>Priority-based organization</li>
+                        <li>Time estimates for each issue</li>
+                        <li>Code fixes with examples</li>
+                        <li>Step-by-step implementation guides</li>
+                        <li>Development roadmap (3 phases)</li>
+                        <li>SQL queries for debugging</li>
+                        <li>Testing checklists</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🚀 How to Use</div>
+                    <div class="card-desc" style="margin-bottom: 10px;">
+                        Use the sidebar menu to navigate between issues and view detailed information, code fixes, and implementation guides.
+                    </div>
+                    <ol style="margin-left: 15px; font-size: 12px; line-height: 1.6;">
+                        <li>Click any issue in sidebar to view details</li>
+                        <li>Read problem description and root causes</li>
+                        <li>Review code fixes and examples</li>
+                        <li>Follow step-by-step implementation guide</li>
+                        <li>Check testing checklist when complete</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- ISSUES SECTION -->
+            <div id="issues" class="section">
+                <h2 style="color: var(--gn); margin-bottom: 15px;">📋 All Issues (13)</h2>
+                
+                <h3 style="color: #ff6b6b; margin-top: 15px; margin-bottom: 10px;">🔴 Critical Issues (2)</h3>
+                <div class="issue-grid">
+                    <div class="issue-card critical">
+                        <div class="issue-number">#7</div>
+                        <div class="card-title">Work Order Field Data Bug</div>
+                        <div class="card-desc">New field displays wrong lab results/soil summary</div>
+                        <span class="badge badge-bug">BUG</span>
+                        <span class="badge badge-critical">CRITICAL</span>
+                        <div style="margin-top: 8px; font-size: 11px; color: var(--tx3);">2-3 hours | Open</div>
+                    </div>
+                    <div class="issue-card critical">
+                        <div class="issue-number">#2</div>
+                        <div class="card-title">JD Boundary Data Missing</div>
+                        <div class="card-desc">Field import not capturing boundary/polygon data</div>
+                        <span class="badge badge-bug">BUG</span>
+                        <span class="badge badge-high">HIGH</span>
+                        <div style="margin-top: 8px; font-size: 11px; color: var(--tx3);">2 hours | Open</div>
+                    </div>
+                </div>
+
+                <h3 style="color: #ff9500; margin-top: 15px; margin-bottom: 10px;">🟠 High Priority Issues (4)</h3>
+                <div class="issue-grid">
+                    <div class="issue-card high">
+                        <div class="issue-number">#1</div>
+                        <div class="card-title">Update Version V34 → V35</div>
+                        <div class="card-desc">Update version in title and settings</div>
+                        <span class="badge badge-bug">BUG</span>
+                        <span class="badge badge-high">HIGH</span>
+                        <div style="margin-top: 8px; font-size: 11px; color: var(--tx3);">30 min | Open</div>
+                    </div>
+                    <div class="issue-card high">
+                        <div class="issue-number">#4</div>
+                        <div class="card-title">Settings Nav - Field Click Bug</div>
+                        <div class="card-desc">Clicking field in settings stays on settings page</div>
+                        <span class="badge badge-bug">BUG</span>
+                        <span class="badge badge-high">HIGH</span>
+                        <div style="margin-top: 8px; font-size: 11px; color: var(--tx3);">45 min | Open</div>
+                    </div>
+                    <div class="issue-card high">
+                        <div class="issue-number">#13</div>
+                        <div class="card-title">Password Reset Email</div>
+                        <div class="card-desc">Admin ability to send password reset emails</div>
+                        <span class="badge badge-feature">FEATURE</span>
+                        <span class="badge badge-high">HIGH</span>
+                        <div style="margin-top: 8px; font-size: 11px; color: var(--tx3);">2 hours | Open</div>
+                    </div>
+                    <div class="issue-card high">
+                        <div class="issue-number">#3</div>
+                        <div class="card-title">Delete Grower & Farm</div>
+                        <div class="card-desc">Add delete functionality with confirmation</div>
+                        <span class="badge badge-feature">FEATURE</span>
+                        <span class="badge badge-medium">MEDIUM</span>
+                        <div style="margin-top: 8px; font-size: 11px; color: var(--tx3);">1.5 hours | Open</div>
+                    </div>
+                </div>
+
+                <h3 style="color: #ffc107; margin-top: 15px; margin-bottom: 10px;">🟡 Medium Priority Issues (5)</h3>
+                <p style="font-size: 12px; color: var(--tx2); margin-bottom: 10px;">
+                    See sidebar for detailed views of #5, #6, #8, #10, #9
+                </p>
+
+                <h3 style="color: #6BCB77; margin-top: 15px; margin-bottom: 10px;">🟢 Low Priority Issues (2)</h3>
+                <p style="font-size: 12px; color: var(--tx2); margin-bottom: 10px;">
+                    See sidebar for #11 and #12
+                </p>
+            </div>
+
+            <!-- ROADMAP SECTION -->
+            <div id="roadmap" class="section">
+                <h2 style="color: var(--gn); margin-bottom: 15px;">🗺️ Development Roadmap</h2>
+
+                <div class="phase-box">
+                    <span class="phase-badge">PHASE 1 - THIS SPRINT</span>
+                    <div style="margin-top: 10px;">
+                        <strong style="display: block; margin-bottom: 6px;">🔴 Critical Fixes (9-10 hours)</strong>
+                        <div style="font-size: 12px; color: var(--tx2); line-height: 1.6;">
+                            #7 - Work Order Data Bug<br>
+                            #2 - JD Boundary Data<br>
+                            #1 - Version Update<br>
+                            #4 - Settings Navigation<br>
+                            #13 - Password Reset Email
+                        </div>
+                    </div>
+                </div>
+
+                <div class="phase-box">
+                    <span class="phase-badge">PHASE 2 - NEXT SPRINT</span>
+                    <div style="margin-top: 10px;">
+                        <strong style="display: block; margin-bottom: 6px;">🟡 Core Features (9-10 hours)</strong>
+                        <div style="font-size: 12px; color: var(--tx2); line-height: 1.6;">
+                            #3 - Delete Grower/Farm<br>
+                            #5 - Digitizing Search<br>
+                            #6 - Work Orders Search<br>
+                            #8 - Recommendations Map<br>
+                            #10 - Change Password
+                        </div>
+                    </div>
+                </div>
+
+                <div class="phase-box">
+                    <span class="phase-badge">PHASE 3 - FUTURE</span>
+                    <div style="margin-top: 10px;">
+                        <strong style="display: block; margin-bottom: 6px;">✨ Polish & Optimization (3-4 hours)</strong>
+                        <div style="font-size: 12px; color: var(--tx2); line-height: 1.6;">
+                            #9 - RX Label Removal<br>
+                            #11 - Auto-Collapse Nutrients<br>
+                            #12 - Sampler Notifications
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INDIVIDUAL ISSUE SECTIONS -->
+            <div id="issue7" class="section">
+                <h2 style="color: #ff6b6b; margin-bottom: 15px;">🔴 #7: Work Order Field Data Bug</h2>
+                <span class="badge badge-critical">CRITICAL</span> <span class="badge badge-bug">BUG</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Problem</div>
+                    <div class="card-desc">When new field created and selected in work order, lab results and soil summary from unrelated fields display instead of correct data.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Root Causes</div>
+                    <ul style="margin-left: 15px; font-size: 12px;">
+                        <li>Field ID not being correctly saved in work_orders.field_id</li>
+                        <li>Lab results query filtering by wrong column</li>
+                        <li>Soil summary pulling from wrong entity</li>
+                        <li>Work order field reference stale/null</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-title">Solution Steps</div>
+                    <div class="card-desc">1. Add debug logging to renderWoDetail()</div>
+                    <div class="code-block">console.log("Work Order:", wo);
+console.log("Field ID:", wo?.field_id);
+console.log("Lab Results:", DATA.lab_results?.filter(lr => lr.work_order_id === wo?.id));</div>
+                    <div class="card-desc" style="margin-top: 10px;">2. Verify field assignment saves correctly when selected</div>
+                    <div class="card-desc" style="margin-top: 10px;">3. Fix data queries to use correct filters (work_order_id for lab results, field_id for soil summary)</div>
+                    <div class="card-desc" style="margin-top: 10px;">4. Update renderWoDetail to use corrected queries</div>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 2-3 hours<br>
+                    <strong>Priority:</strong> CRITICAL - Data integrity issue
+                </div>
+            </div>
+
+            <div id="issue2" class="section">
+                <h2 style="color: #ff6b6b; margin-bottom: 15px;">🔴 #2: JD Boundary Data Missing</h2>
+                <span class="badge badge-high">HIGH</span> <span class="badge badge-bug">BUG</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Problem</div>
+                    <div class="card-desc">Fields imported from John Deere Operation Center lack boundary/polygon data needed for map display.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Solution</div>
+                    <div class="card-desc">1. Debug JD API response to identify geometry location</div>
+                    <div class="code-block">console.log("Full JD Response:", jdResponse);
+console.log("Sample Field:", jdResponse.values?.[0]);
+console.log("Keys:", Object.keys(jdResponse.values?.[0]));</div>
+                    <div class="card-desc" style="margin-top: 10px;">2. Extract boundary data from response (check: geometry, boundary, polygon, shape, @geometry)</div>
+                    <div class="card-desc" style="margin-top: 10px;">3. Map boundary data to field geojson column</div>
+                    <div class="card-desc" style="margin-top: 10px;">4. Display boundaries on map with L.geoJSON()</div>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 2 hours<br>
+                    <strong>Priority:</strong> HIGH - Map functionality
+                </div>
+            </div>
+
+            <div id="issue1" class="section">
+                <h2 style="color: #ff9500; margin-bottom: 15px;">🟠 #1: Update Version V34 → V35</h2>
+                <span class="badge badge-high">HIGH</span> <span class="badge badge-bug">BUG</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Problem</div>
+                    <div class="card-desc">Application displays V33 in title and UI. Need to update to V35 everywhere.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Solution</div>
+                    <div class="code-block">// Add at top of script
+const VERSION = "35";
+const APP_FULL_NAME = `AgriMax V${VERSION}`;
+
+// Update title tag
+&lt;title&gt;AgriMax V35 — Powered by JogleGen&lt;/title&gt;
+
+// Add to Settings page
+Version: ${APP_FULL_NAME}</div>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 30 minutes<br>
+                    <strong>Difficulty:</strong> Easy
+                </div>
+            </div>
+
+            <div id="issue4" class="section">
+                <h2 style="color: #ff9500; margin-bottom: 15px;">🟠 #4: Settings Navigation Bug</h2>
+                <span class="badge badge-high">HIGH</span> <span class="badge badge-bug">BUG</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Problem</div>
+                    <div class="card-desc">Clicking field in sidebar while in Settings page stays on Settings instead of navigating to Field Details.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Solution</div>
+                    <div class="code-block">// Fix field click handler
+$('.field').on('click', function() {
+  const fieldId = $(this).data('field-id');
+  CURRENT_PAGE = 'fielddetail';
+  CURRENT_FIELD_ID = fieldId;
+  renderFieldDetails(fieldId);
+});</div>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 45 minutes<br>
+                    <strong>Difficulty:</strong> Easy
+                </div>
+            </div>
+
+            <div id="issue13" class="section">
+                <h2 style="color: #ff9500; margin-bottom: 15px;">🟠 #13: Password Reset Email</h2>
+                <span class="badge badge-high">HIGH</span> <span class="badge badge-feature">FEATURE</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Problem</div>
+                    <div class="card-desc">Admins cannot send password reset emails to users. Critical for user management.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Solution</div>
+                    <div class="code-block">async function sendPasswordResetEmail(userId, userEmail) {
+  const { error } = await supa.auth.resetPasswordForEmail(userEmail, {
+    redirectTo: window.location.origin + '/reset-password'
+  });
+  if(!error) {
+    await supa.from('audit_log').insert({
+      action: 'password_reset_sent',
+      target_user_id: userId
+    });
+    toast("Email sent to " + userEmail);
+  }
+}</div>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 2 hours<br>
+                    <strong>Difficulty:</strong> Medium
+                </div>
+            </div>
+
+            <div id="issue3" class="section">
+                <h2 style="color: #ff9500; margin-bottom: 15px;">🟠 #3: Delete Grower & Farm</h2>
+                <span class="badge badge-medium">MEDIUM</span> <span class="badge badge-feature">FEATURE</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Problem</div>
+                    <div class="card-desc">Users cannot delete growers or farms. Needed for data cleanup.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Solution</div>
+                    <div class="card-desc">1. Add delete buttons to grower/farm rows in sidebar</div>
+                    <div class="card-desc" style="margin-top: 10px;">2. Show double confirmation dialog with count of items to be deleted</div>
+                    <div class="card-desc" style="margin-top: 10px;">3. Delete farms cascade when grower deleted</div>
+                    <div class="card-desc" style="margin-top: 10px;">4. Delete fields cascade when farm deleted</div>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 1.5 hours<br>
+                    <strong>Difficulty:</strong> Medium
+                </div>
+            </div>
+
+            <div id="issue5" class="section">
+                <h2 style="color: #ffc107; margin-bottom: 15px;">🟡 #5: Search in Digitizing Module</h2>
+                <span class="badge badge-medium">MEDIUM</span> <span class="badge badge-feature">FEATURE</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Problem</div>
+                    <div class="card-desc">Digitizing module lacks search functionality. Users must scroll to find fields.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Solution</div>
+                    <div class="code-block">// Add search input at top of digitizing panel
+&lt;input type="text" id="digitize-search" placeholder="Search fields..."&gt;
+
+// Real-time filtering
+$('#digitize-search').on('keyup', function() {
+  const query = $(this).val().toLowerCase();
+  const matching = DATA.fields.filter(f => 
+    f.name.toLowerCase().includes(query)
+  );
+  // Update displayed fields
+});</div>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 1 hour<br>
+                    <strong>Difficulty:</strong> Easy
+                </div>
+            </div>
+
+            <div id="issue6" class="section">
+                <h2 style="color: #ffc107; margin-bottom: 15px;">🟡 #6: Improve Work Orders Search</h2>
+                <span class="badge badge-medium">MEDIUM</span> <span class="badge badge-feature">FEATURE</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Enhancement Areas</div>
+                    <ul style="margin-left: 15px; font-size: 12px;">
+                        <li>Search by work order number</li>
+                        <li>Search by field name</li>
+                        <li>Filter by status (pending, sampled, at_lab, complete)</li>
+                        <li>Filter by grower/farm</li>
+                        <li>Sort options (date, status)</li>
+                    </ul>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 2 hours<br>
+                    <strong>Difficulty:</strong> Medium
+                </div>
+            </div>
+
+            <div id="issue8" class="section">
+                <h2 style="color: #ffc107; margin-bottom: 15px;">🟡 #8: Recommendations Map View</h2>
+                <span class="badge badge-medium">MEDIUM</span> <span class="badge badge-feature">FEATURE</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Problem</div>
+                    <div class="card-desc">Recommendation maps only visible in Work Orders. Need on Field Details page.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Solution</div>
+                    <div class="card-desc">1. Add Recommendations tab to Field Details page</div>
+                    <div class="card-desc" style="margin-top: 10px;">2. Query recommendations for selected field</div>
+                    <div class="card-desc" style="margin-top: 10px;">3. Display map with surfaces, plant dates, harvest dates</div>
+                    <div class="card-desc" style="margin-top: 10px;">4. Reuse component from Work Orders</div>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 3 hours<br>
+                    <strong>Difficulty:</strong> Medium
+                </div>
+            </div>
+
+            <div id="issue10" class="section">
+                <h2 style="color: #ffc107; margin-bottom: 15px;">🟡 #10: User Password Change</h2>
+                <span class="badge badge-medium">MEDIUM</span> <span class="badge badge-feature">FEATURE</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Problem</div>
+                    <div class="card-desc">Users cannot change their own password. Only admins can manage.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Requirements</div>
+                    <ul style="margin-left: 15px; font-size: 12px;">
+                        <li>Add password change section in Settings</li>
+                        <li>Require current password verification</li>
+                        <li>Confirm new password (2x entry)</li>
+                        <li>Validate 8+ character requirement</li>
+                        <li>Show success/error message</li>
+                    </ul>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 1.5 hours<br>
+                    <strong>Difficulty:</strong> Medium
+                </div>
+            </div>
+
+            <div id="issue9" class="section">
+                <h2 style="color: #ffc107; margin-bottom: 15px;">🟡 #9: Remove RX Export Labels</h2>
+                <span class="badge badge-low">LOW</span> <span class="badge badge-feature">FEATURE</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Problem</div>
+                    <div class="card-desc">RX text export includes nutrient labels (P2O5, DAP). Should show only lbs/ac values.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Solution</div>
+                    <div class="card-desc">Locate RX export function and remove nutrient labels from text output, keeping only numeric values.</div>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 1 hour<br>
+                    <strong>Difficulty:</strong> Easy
+                </div>
+            </div>
+
+            <div id="issue11" class="section">
+                <h2 style="color: #6BCB77; margin-bottom: 15px;">🟢 #11: Auto-Collapse Avg Nutrients</h2>
+                <span class="badge badge-low">LOW</span> <span class="badge badge-feature">FEATURE</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Problem</div>
+                    <div class="card-desc">Dashboard loads with "Avg Nutrients" expanded by default, taking up screen space.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Solution</div>
+                    <div class="card-desc">Set nutrient card to collapsed by default. Users can expand if needed. Save preference to localStorage.</div>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 45 minutes<br>
+                    <strong>Difficulty:</strong> Easy
+                </div>
+            </div>
+
+            <div id="issue12" class="section">
+                <h2 style="color: #6BCB77; margin-bottom: 15px;">🟢 #12: Sampler Email Notifications</h2>
+                <span class="badge badge-low">LOW</span> <span class="badge badge-feature">FEATURE</span>
+                <div class="card" style="margin-top: 12px;">
+                    <div class="card-title">Investigation</div>
+                    <div class="card-desc">Clarify whether sampler role receives email notifications and under what conditions.</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Questions to Answer</div>
+                    <ul style="margin-left: 15px; font-size: 12px;">
+                        <li>Does "sampler" role exist in auth?</li>
+                        <li>Are email notifications configured?</li>
+                        <li>Which events trigger sampler notifications?</li>
+                        <li>Are emails actually being sent?</li>
+                    </ul>
+                </div>
+                <div class="note">
+                    <strong>Estimated Time:</strong> 1 hour<br>
+                    <strong>Difficulty:</strong> Research
+                </div>
+            </div>
+
+        </div>
+
+        <footer>
+            AgriMax V35 Issues & Fixes Documentation | Total: 13 Issues | 25-27 Hours Estimated
+        </footer>
     </div>
 </div>
 
-<div class="container">
+<script>
+function showSection(sectionId) {
+    // Hide all sections
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(s => s.classList.remove('active'));
     
-    <!-- KEY STATS -->
-    <div class="stats">
-        <div class="stat">
-            <span class="stat-number">13</span>
-            <span class="stat-label">Issues</span>
-        </div>
-        <div class="stat">
-            <span class="stat-number">25-27</span>
-            <span class="stat-label">Est. Hours</span>
-        </div>
-        <div class="stat">
-            <span class="stat-number">3</span>
-            <span class="stat-label">Phases</span>
-        </div>
-        <div class="stat">
-            <span class="stat-number">2</span>
-            <span class="stat-label">Critical</span>
-        </div>
-    </div>
-
-    <!-- MAIN CARDS -->
-    <div class="cards-grid">
-        <div class="card issues">
-            <div class="card-icon">📋</div>
-            <h3>Issues & Features</h3>
-            <p>
-                Complete list of all 13 issues organized by priority (Critical, High, Medium, Low). Includes problem descriptions, impact analysis, and solutions.
-            </p>
-            <a href="issues.html" class="card-link">
-                View Issues Page →
-            </a>
-        </div>
-        
-        <div class="card fixes">
-            <div class="card-icon">🔧</div>
-            <h3>Code Fixes</h3>
-            <p>
-                Detailed implementation guide with working code examples for each issue. Copy-paste ready solutions with step-by-step instructions.
-            </p>
-            <a href="fixes.html" class="card-link">
-                View Code Fixes →
-            </a>
-        </div>
-        
-        <div class="card roadmap">
-            <div class="card-icon">🗺️</div>
-            <h3>Development Roadmap</h3>
-            <p>
-                Phased approach to prioritize and schedule work. Phase 1 critical fixes, Phase 2 core features, Phase 3 polish and optimization.
-            </p>
-            <a href="issues.html#roadmap" class="card-link">
-                View Roadmap →
-            </a>
-        </div>
-    </div>
-
-    <!-- DEVELOPMENT PHASES -->
-    <h2 class="section-title">Development Timeline</h2>
+    // Remove active class from nav items
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => item.classList.remove('active'));
     
-    <div class="timeline">
-        <div class="phase">
-            <div class="phase-badge">Phase 1<br>THIS SPRINT</div>
-            <div class="phase-content">
-                <h4>🔴 Critical Fixes (9-10 hours)</h4>
-                <p>Must-have fixes for V35 release. Data integrity and core functionality issues.</p>
-                <div class="issues-list">
-                    <span class="issue-tag">#7 - Work Order Data</span>
-                    <span class="issue-tag">#2 - JD Boundaries</span>
-                    <span class="issue-tag">#1 - Version Update</span>
-                    <span class="issue-tag">#4 - Settings Nav</span>
-                    <span class="issue-tag">#13 - Password Reset</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="phase">
-            <div class="phase-badge">Phase 2<br>NEXT SPRINT</div>
-            <div class="phase-content">
-                <h4>🟠 Core Features (9-10 hours)</h4>
-                <p>Important features for user workflow and satisfaction. High impact on usability.</p>
-                <div class="issues-list">
-                    <span class="issue-tag">#3 - Delete Grower/Farm</span>
-                    <span class="issue-tag">#5 - Digitizing Search</span>
-                    <span class="issue-tag">#6 - WO Search</span>
-                    <span class="issue-tag">#8 - Recommendations Map</span>
-                    <span class="issue-tag">#10 - Change Password</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="phase">
-            <div class="phase-badge">Phase 3<br>FUTURE</div>
-            <div class="phase-content">
-                <h4>🟡 Polish & Optimization (3-4 hours)</h4>
-                <p>Nice-to-have improvements and refinements. Lower priority but good UX enhancements.</p>
-                <div class="issues-list">
-                    <span class="issue-tag">#9 - RX Labels</span>
-                    <span class="issue-tag">#11 - Auto-Collapse</span>
-                    <span class="issue-tag">#12 - Sampler Emails</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- QUICK START -->
-    <h2 class="section-title" style="margin-top: 50px;">Getting Started</h2>
+    // Show selected section
+    const section = document.getElementById(sectionId);
+    if(section) {
+        section.classList.add('active');
+    }
     
-    <div class="footer-nav">
-        <div>
-            <h4>📖 Documentation</h4>
-            <a href="issues.html">Issues Overview</a>
-            <a href="fixes.html">Code Fixes Guide</a>
-            <a href="https://github.com/yourusername/agrimax">GitHub Repository</a>
-        </div>
-        
-        <div>
-            <h4>🚀 For Developers</h4>
-            <a href="fixes.html#fix-7">Start with Critical Fixes</a>
-            <a href="fixes.html">View Code Examples</a>
-            <a href="issues.html">Full Issue Details</a>
-        </div>
-        
-        <div>
-            <h4>📊 Project Info</h4>
-            <a href="#">Total: 13 Issues</a>
-            <a href="#">Est. Time: 25-27 hrs</a>
-            <a href="#">Phases: 3</a>
-        </div>
-        
-        <div>
-            <h4>🔗 Resources</h4>
-            <a href="https://github.com/yourusername/agrimax/issues">GitHub Issues</a>
-            <a href="https://github.com/yourusername/agrimax/projects">Project Board</a>
-            <a href="https://github.com/yourusername/agrimax/wiki">Wiki</a>
-        </div>
-    </div>
-
-    <!-- QUICK FACTS -->
-    <div style="background: white; border-radius: 10px; padding: 30px; margin-top: 40px; box-shadow: 0 4px 12px rgba(0,0,0,.08);">
-        <h3 style="color: #1e5631; margin-bottom: 20px;">💡 Quick Facts</h3>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-            <div style="border-left: 3px solid #ff6b6b; padding-left: 15px;">
-                <h4 style="color: #c00000; margin-bottom: 6px;">2 Critical Bugs</h4>
-                <p style="font-size: 13px; color: #5a6b52;">Work order data and JD field boundaries - must fix for release</p>
-            </div>
-            
-            <div style="border-left: 3px solid #ff9500; padding-left: 15px;">
-                <h4 style="color: #ff9500; margin-bottom: 6px;">4 High Priority</h4>
-                <p style="font-size: 13px; color: #5a6b52;">Version update, settings navigation, password management</p>
-            </div>
-            
-            <div style="border-left: 3px solid #ffc107; padding-left: 15px;">
-                <h4 style="color: #7d6608; margin-bottom: 6px;">5 Medium Priority</h4>
-                <p style="font-size: 13px; color: #5a6b52;">Search functions, recommendations map, delete features</p>
-            </div>
-            
-            <div style="border-left: 3px solid #6BCB77; padding-left: 15px;">
-                <h4 style="color: #1e5631; margin-bottom: 6px;">2 Low Priority</h4>
-                <p style="font-size: 13px; color: #5a6b52;">UI improvements and optional features</p>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<footer>
-    <p><strong>AgriMax V35 - Development Documentation</strong></p>
-    <p style="margin-top: 10px;">
-        Record Harvest Enterprises • Last Updated May 2026
-    </p>
-    <p style="margin-top: 15px;">
-        <a href="https://github.com/yourusername/agrimax">View on GitHub</a> | 
-        <a href="issues.html">Issues</a> | 
-        <a href="fixes.html">Code Fixes</a>
-    </p>
-</footer>
+    // Mark nav item as active
+    event.target.classList.add('active');
+}
+</script>
 
 </body>
 </html>
