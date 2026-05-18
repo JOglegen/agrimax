@@ -129,20 +129,30 @@ function enhanceGrowerFarmRows() {
 
 function fixFieldClickNavigation() {
   // Override field click to navigate to field details, not settings
-  const fieldElements = document.querySelectorAll('.field');
-  fieldElements.forEach(el => {
-    el.onclick = function(e) {
+  // This runs on document to catch all field clicks
+  document.addEventListener('click', function(e) {
+    const fieldEl = e.target.closest('.field');
+    if(fieldEl) {
       e.stopPropagation();
-      const fieldId = this.dataset.fieldId || this.getAttribute('data-id');
+      
+      // Get field ID from various possible attributes
+      const fieldId = fieldEl.dataset.fieldId || 
+                      fieldEl.getAttribute('data-id') || 
+                      fieldEl.getAttribute('data-field-id');
+      
       if(fieldId) {
+        // CRITICAL: Clear current page and set to fielddetail
         CURRENT_PAGE = 'fielddetail';
         CURRENT_FIELD_ID = fieldId;
+        
+        // Make sure renderFieldDetails exists and call it
         if(typeof renderFieldDetails === 'function') {
           renderFieldDetails(fieldId);
+          return false;
         }
       }
-    };
-  });
+    }
+  }, true); // Use capture phase to ensure we catch it first
 }
 
 </script>
