@@ -3,18 +3,13 @@
 <head>
 <script>
 (async function jdCallbackHandler(){
-  // On Netlify the callback lands at the root URL with ?code=...&state=...
-  // (not at /callback), so we detect by the presence of the 'code' param
-  // AND a 'state' param that decodes to a known shape (has org_id).
-  // This avoids treating unrelated ?code= params (e.g. Dropbox) as a JD callback.
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
   const state = params.get('state');
   if(!code || !state) return;
-  // Make sure the state looks like a JD state (base64 JSON with org_id)
   try {
     const decoded = JSON.parse(atob(state));
-    if(!decoded.org_id) return; // not a JD callback
+    if(!decoded.org_id) return;
   } catch(_) { return; }
 
   const SUPABASE_URL = 'https://dkmfjtfdfuuouhcuhoer.supabase.co';
@@ -5878,10 +5873,6 @@ async function surfRender(){
              minLng: minLng - padLng, maxLng: maxLng + padLng };
   }
 
-  // ── Metres-based grid resolution ────────────────────────────────────────
-  // Convert the user-selected cell size (metres) → degree steps, then derive
-  // cols/rows from the field bounding box. Capped at 600 cells per axis to
-  // keep render time reasonable on very large fields at fine resolution.
   const cellSizeM = parseFloat($("surf-cellsize")?.value || "5");
   const M_PER_DEG_LAT_SURF = 111320;
   const midLat = (bbox.minLat + bbox.maxLat) / 2;
@@ -23157,7 +23148,8 @@ async function jdImportSelected(){
     }
   }
 
-  renderGrowerTree();
+  await loadAll();
+  renderTree();
 
   let html = '<div class="card"><div style="font-weight:700;font-size:13px;margin-bottom:8px">Import Complete</div><div style="font-size:12px;color:var(--tx3)">';
   if(imported > 0) html += '<div style="color:#1e5631">✓ ' + imported + ' field(s) imported</div>';
