@@ -3,18 +3,28 @@
 <head>
 <script>
 (async function jdCallbackHandler(){
-  if(window.location.pathname !== '/callback') return;
-  const SUPABASE_URL = 'https://dkmfjtfdfuuouhcuhoer.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_wSJWe5ieVE7vXFnRKtUjcw_6K_V74z8';
+  // On Netlify the callback lands at the root URL with ?code=...&state=...
+  // (not at /callback), so we detect by the presence of the 'code' param
+  // AND a 'state' param that decodes to a known shape (has org_id).
+  // This avoids treating unrelated ?code= params (e.g. Dropbox) as a JD callback.
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
   const state = params.get('state');
+  if(!code || !state) return;
+  // Make sure the state looks like a JD state (base64 JSON with org_id)
+  try {
+    const decoded = JSON.parse(atob(state));
+    if(!decoded.org_id) return; // not a JD callback
+  } catch(_) { return; }
+
+  const SUPABASE_URL = 'https://dkmfjtfdfuuouhcuhoer.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_wSJWe5ieVE7vXFnRKtUjcw_6K_V74z8';
   const errorMsg = params.get('error');
+
   document.documentElement.innerHTML = '<!DOCTYPE html><html><head><meta charset=UTF-8><style>body{font-family:Segoe UI,system-ui,sans-serif;background:#1e5631;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.box{background:#fff;border-radius:16px;padding:36px 32px;max-width:380px;width:100%;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,.3)}h2{color:#1e5631;margin-bottom:8px;font-size:20px}p{color:#5a6b52;font-size:13px}.spinner{width:32px;height:32px;border:3px solid #e8f4e8;border-top-color:#1e5631;border-radius:50%;animation:spin 0.8s linear infinite;margin:16px auto}@keyframes spin{to{transform:rotate(360deg)}}.err{color:#922b21;background:#fdecea;border:1px solid #f5b7b1;border-radius:8px;padding:10px;font-size:12px;margin-top:12px}</style></head><body><div class=box><h2>Connecting John Deere</h2><div class=spinner></div><p id=msg>Exchanging authorization code...</p><div id=err></div></div></body></html>';
   function setMsg(t){ document.getElementById('msg').textContent=t; }
   function setErr(t){ document.getElementById('err').innerHTML='<div class=err>'+t+'</div>'; document.getElementById('msg').textContent='Connection failed.'; }
   if(errorMsg){ setErr('John Deere error: '+errorMsg); setTimeout(()=>location.href='/',4000); return; }
-  if(!code){ setErr('No authorization code received.'); setTimeout(()=>location.href='/',4000); return; }
   try {
     setMsg('Storing connection...');
     const res = await fetch(SUPABASE_URL+'/functions/v1/jdoc_auth',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY},body:JSON.stringify({action:'exchange_code',code,state})});
@@ -5873,7 +5883,7 @@ async function surfRender(){
   // cols/rows from the field bounding box. Capped at 600 cells per axis to
   // keep render time reasonable on very large fields at fine resolution.
   const cellSizeM = parseFloat($("surf-cellsize")?.value || "5");
-  const M_PER_DEG_LAT_SURF = 111320; // metres per degree latitude (constant)
+  const M_PER_DEG_LAT_SURF = 111320;
   const midLat = (bbox.minLat + bbox.maxLat) / 2;
   const mPerDegLng = M_PER_DEG_LAT_SURF * Math.cos(midLat * Math.PI / 180);
   const dLat = bbox.maxLat - bbox.minLat;
@@ -5883,7 +5893,6 @@ async function surfRender(){
   const MAX_CELLS = 600;
   const cols = Math.max(10, Math.min(MAX_CELLS, Math.ceil(dLng / stepLng)));
   const rows = Math.max(10, Math.min(MAX_CELLS, Math.ceil(dLat / stepLat)));
-  // Warn if we hit the cap (field is large relative to chosen cell size)
   if(cols === MAX_CELLS || rows === MAX_CELLS){
     const effectiveM = Math.max(dLat / MAX_CELLS * M_PER_DEG_LAT_SURF, dLng / MAX_CELLS * mPerDegLng);
     $("surf-status").textContent = `⚠ Field too large for ${cellSizeM}m cells — using ~${Math.round(effectiveM)}m effective cell size. Select a coarser resolution to improve accuracy.`;
