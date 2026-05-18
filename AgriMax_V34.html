@@ -22946,6 +22946,7 @@ async function renderSettingsIntegrationsTab(){
         '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
           '<button class="btn btn-p" onclick="jdImportFields()">⬇ Import Fields</button>' +
+          '<button class="btn btn-p" onclick="jdFetchBoundaries()" style="background:#2e7d32;border-color:#2e7d32" title="Fetch boundaries for all JD-imported fields that are missing them">🗺 Fetch Boundaries</button>' +
           '<button class="btn" onclick="jdDisconnect()" style="color:#922b21;border-color:#f5b7b1">Disconnect</button>' +
         '</div>'
       :
@@ -23011,6 +23012,124 @@ async function jdDisconnect(){
   }
 }
 
+async function jdFetchBoundaries(){
+  const resultsDiv = $('jd-import-results');
+
+  // Find all JD-imported fields that are missing a boundary
+  const jdFields = DATA.fields.filter(f =>
+    f.notes && f.notes.startsWith('Imported from John Deere (ID: ') && !f.boundary_geojson
+  );
+
+  if(jdFields.length === 0){
+    resultsDiv.innerHTML = '<div class="card"><div style="color:#1e5631;font-size:12px">✓ All JD-imported fields already have boundaries.</div></div>';
+    return;
+  }
+
+  // Extract JD field ID and org ID from notes field
+  // Notes format: "Imported from John Deere (ID: <jd_field_id>)"
+  // We need the org ID — look it up from grower name via connected orgs
+  // Build a lookup: field → jd_field_id + jd_org_id
+  const toFetch = [];
+  for(const f of jdFields){
+    const match = f.notes.match(/Imported from John Deere \(ID: ([^)]+)\)/);
+    if(!match) continue;
+    const jdFieldId = match[1];
+    // Find the JD org id by walking up the tree: field → farm → grower → match org name
+    const farm   = DATA.farms.find(fa => fa.id === f.farm_id);
+    const grower = farm ? DATA.growers.find(g => g.id === farm.grower_id) : null;
+    if(!grower) continue;
+    // Match grower name to a connected JD org — we stored jd_org_name as grower name on import
+    // We need the numeric JD org ID. Store it by fetching orgs list once.
+    toFetch.push({ fieldId: f.id, jdFieldId, growerName: grower.name });
+  }
+
+  if(toFetch.length === 0){
+    resultsDiv.innerHTML = '<div class="card"><div class="al aw">Could not determine JD org IDs for fields. Try re-importing fields first.</div></div>';
+    return;
+  }
+
+  resultsDiv.innerHTML = '<div class="card" id="jd-boundary-progress">' +
+    '<div style="font-weight:700;font-size:13px;margin-bottom:8px">🗺 Fetching Boundaries</div>' +
+    '<div id="jd-bp-bar" style="background:#f0f4ec;border-radius:4px;height:8px;margin-bottom:8px"><div id="jd-bp-fill" style="background:#1e5631;height:8px;border-radius:4px;width:0%;transition:width .3s"></div></div>' +
+    '<div id="jd-bp-status" style="font-size:11px;color:var(--tx3)">Fetching org list...</div>' +
+  '</div>';
+
+  const setStatus = (msg) => { const el = $('jd-bp-status'); if(el) el.textContent = msg; };
+  const setProgress = (n, total) => { const el = $('jd-bp-fill'); if(el) el.style.width = Math.round(n/total*100) + '%'; };
+
+  try {
+    // Fetch org list once to get numeric JD org IDs
+    const orgRes = await fetch(SUPABASE_URL + '/functions/v1/jdoc_data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ action: 'list_organizations', org_id: ORG_ID }),
+    });
+    const orgData = await orgRes.json();
+    if(orgData.error){ setStatus('Error: ' + orgData.error); return; }
+
+    // Build grower name → JD org ID lookup
+    const orgByName = {};
+    for(const o of (orgData.organizations || [])){
+      orgByName[o.name] = o.id;
+    }
+
+    let done = 0, saved = 0, failed = 0;
+    const total = toFetch.length;
+
+    for(const item of toFetch){
+      const jdOrgId = orgByName[item.growerName];
+      if(!jdOrgId){
+        failed++;
+        done++;
+        setProgress(done, total);
+        setStatus(`${done}/${total} — skipped "${item.growerName}" (org not found in JD)`);
+        continue;
+      }
+
+      try {
+        setStatus(`${done}/${total} — fetching boundary for field ${item.jdFieldId}...`);
+        const res = await fetch(SUPABASE_URL + '/functions/v1/jdoc_data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+          body: JSON.stringify({ action: 'get_field_boundary', org_id: ORG_ID, jd_org_id: jdOrgId, field_id: item.jdFieldId }),
+        });
+        const data = await res.json();
+
+        if(data.boundary_geojson){
+          // Save to Supabase
+          const { error } = await supa.from('fields')
+            .update({ boundary_geojson: data.boundary_geojson })
+            .eq('id', item.fieldId);
+          if(!error){
+            // Update local cache
+            const local = DATA.fields.find(f => f.id === item.fieldId);
+            if(local) local.boundary_geojson = data.boundary_geojson;
+            saved++;
+          } else { failed++; }
+        } else { failed++; }
+      } catch(e){ failed++; }
+
+      done++;
+      setProgress(done, total);
+      setStatus(`${done}/${total} — ${saved} saved, ${failed} failed`);
+    }
+
+    // Reload data so maps reflect new boundaries
+    await loadAll();
+
+    const el = $('jd-boundary-progress');
+    if(el) el.innerHTML =
+      '<div style="font-weight:700;font-size:13px;margin-bottom:6px">🗺 Boundaries Complete</div>' +
+      '<div style="font-size:12px;color:var(--tx3)">' +
+        (saved  > 0 ? '<div style="color:#1e5631">✓ ' + saved  + ' boundaries saved</div>' : '') +
+        (failed > 0 ? '<div style="color:#922b21">✗ ' + failed + ' failed (field may have no boundary in JD)</div>' : '') +
+      '</div>';
+
+  } catch(e){
+    setStatus('Error: ' + e.message);
+  }
+}
+
 async function jdImportFields(){
   const resultsDiv = $('jd-import-results');
   if(!resultsDiv) return;
@@ -23052,7 +23171,6 @@ async function jdImportFields(){
       html += '<div style="margin-bottom:14px">';
       html += '<div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">' + orgName + '</div>';
       for(const [farmName, fields] of Object.entries(farms)) {
-        // Only show farm subheading if it differs from org name
         if(farmName !== orgName){
           html += '<div style="font-size:10.5px;font-weight:600;color:var(--tx3);margin:6px 0 3px 4px">🌾 ' + farmName + '</div>';
         }
@@ -23085,110 +23203,70 @@ async function jdImportFields(){
 async function jdImportSelected(){
   const checkboxes = document.querySelectorAll('[id^="jdf-"]:checked');
   if(checkboxes.length === 0) { alert('No fields selected.'); return; }
-
-  if(DATA.retailers.length === 0){
-    alert('You need at least one retailer set up first. Go to Settings → Retailers to add one.');
-    return;
-  }
+  if(DATA.retailers.length === 0){ alert('You need at least one retailer set up first.'); return; }
   let defaultRetailerId = DATA.retailers[0].id;
   if(DATA.retailers.length > 1){
     const list = DATA.retailers.map((r,i) => `${i+1}. ${r.name}`).join('\n');
     const pick = prompt(`Multiple retailers exist. Enter the number to attach new growers to:\n\n${list}`, '1');
     const idx = parseInt(pick) - 1;
-    if(isNaN(idx) || idx < 0 || idx >= DATA.retailers.length){
-      alert('Import cancelled.'); return;
-    }
+    if(isNaN(idx) || idx < 0 || idx >= DATA.retailers.length){ alert('Import cancelled.'); return; }
     defaultRetailerId = DATA.retailers[idx].id;
   }
-
   const resultsDiv = $('jd-import-results');
   resultsDiv.innerHTML = '<div class="card"><div style="text-align:center;padding:20px;color:var(--tx3);font-size:12px">⏳ Importing ' + checkboxes.length + ' field(s)...</div></div>';
-
   let imported = 0, skipped = 0;
   const errors = [];
   const createdGrowers = {};
   const createdFarms   = {};
-
   for(const cb of checkboxes) {
     const idx = parseInt(cb.dataset.idx);
     const jdField = JD_FIELDS[idx];
     if(!jdField) continue;
-
     try {
       const gname = jdField.jd_org_name;
       let growerId = createdGrowers[gname];
       if(!growerId){
         const existing = DATA.growers.find(g => g.name === gname && g.retailer_id === defaultRetailerId);
-        if(existing){
-          growerId = existing.id;
-        } else {
-          const ins = await supa.from('growers')
-            .insert({ name: gname, retailer_id: defaultRetailerId, org_id: ORG_ID })
-            .select().single();
+        if(existing){ growerId = existing.id; }
+        else {
+          const ins = await supa.from('growers').insert({ name: gname, retailer_id: defaultRetailerId, org_id: ORG_ID }).select().single();
           if(ins.error){ errors.push(jdField.field_name + ' (grower): ' + ins.error.message); continue; }
           growerId = ins.data.id;
           DATA.growers.push(ins.data);
         }
         createdGrowers[gname] = growerId;
       }
-
       const farmName = jdField.farm_name || jdField.jd_org_name;
       const farmKey  = growerId + '|' + farmName;
       let farmId = createdFarms[farmKey];
       if(!farmId){
         const existing = DATA.farms.find(f => f.grower_id === growerId && f.name === farmName);
-        if(existing){
-          farmId = existing.id;
-        } else {
-          const ins = await supa.from('farms')
-            .insert({ name: farmName, grower_id: growerId, org_id: ORG_ID })
-            .select().single();
+        if(existing){ farmId = existing.id; }
+        else {
+          const ins = await supa.from('farms').insert({ name: farmName, grower_id: growerId, org_id: ORG_ID }).select().single();
           if(ins.error){ errors.push(jdField.field_name + ' (farm): ' + ins.error.message); continue; }
           farmId = ins.data.id;
           DATA.farms.push(ins.data);
         }
         createdFarms[farmKey] = farmId;
       }
-
       const exists = DATA.fields.find(f => f.farm_id === farmId && f.name === jdField.field_name);
       if(exists){ skipped++; continue; }
-
-      let boundaryGeoJSON = null;
-      if(jdField.boundary_geojson){
-        try {
-          boundaryGeoJSON = typeof jdField.boundary_geojson === 'string'
-            ? JSON.parse(jdField.boundary_geojson)
-            : jdField.boundary_geojson;
-        } catch(e2) {}
-      }
-
-      const fieldInsert = {
-        name:    jdField.field_name,
-        farm_id: farmId,
-        org_id:  ORG_ID,
-        acres:   jdField.acres,
-        notes:   'Imported from John Deere (ID: ' + jdField.jd_field_id + ')',
-      };
-      if(boundaryGeoJSON) fieldInsert.boundary_geojson = boundaryGeoJSON;
-
+      const fieldInsert = { name: jdField.field_name, farm_id: farmId, org_id: ORG_ID, acres: jdField.acres, notes: 'Imported from John Deere (ID: ' + jdField.jd_field_id + ')' };
       const ins = await supa.from('fields').insert(fieldInsert).select().single();
       if(ins.error){ errors.push(jdField.field_name + ': ' + ins.error.message); continue; }
       DATA.fields.push(ins.data);
       imported++;
-
-    } catch(e) {
-      errors.push(jdField.field_name + ': ' + e.message);
-    }
+    } catch(e) { errors.push(jdField.field_name + ': ' + e.message); }
   }
-
   await loadAll();
   renderTree();
-
   let html = '<div class="card"><div style="font-weight:700;font-size:13px;margin-bottom:8px">Import Complete</div><div style="font-size:12px;color:var(--tx3)">';
   if(imported > 0) html += '<div style="color:#1e5631">✓ ' + imported + ' field(s) imported</div>';
-  if(skipped > 0)  html += '<div>⟳ ' + skipped + ' field(s) already existed (skipped)</div>';
+  if(skipped > 0)  html += '<div>⟳ ' + skipped + ' already existed (skipped)</div>';
   for(const e of errors) html += '<div style="color:#922b21">✗ ' + e + '</div>';
-  if(imported === 0 && skipped === 0 && errors.length === 0) html += '<div style="color:var(--tx3)">Nothing to import.</div>';
+  if(imported === 0 && skipped === 0 && errors.length === 0) html += '<div>Nothing to import.</div>';
+  html += '<div style="margin-top:10px;font-size:11px;color:var(--tx3)">Boundaries not yet fetched — click <strong>🗺 Fetch Boundaries</strong> to pull them from John Deere.</div>';
   html += '</div></div>';
   resultsDiv.innerHTML = html;
 }
