@@ -100,17 +100,19 @@ window.jdFetchFields = async function() {
 
 // ==================== INITIALIZE FIXES ON PAGE LOAD ====================
 window.addEventListener('DOMContentLoaded', function() {
-  // Fix #1: Update title with version constant (already done above)
+  console.log('AgriMax V35 fixes initializing...');
+  
+  // Fix #1: Version already updated in title
   
   // Fix #3: Add delete buttons to grower/farm rows
   setTimeout(function() {
+    console.log('Enhancing grower/farm rows...');
     enhanceGrowerFarmRows();
   }, 500);
   
-  // Fix #4: Fix field click navigation
-  setTimeout(function() {
-    fixFieldClickNavigation();
-  }, 500);
+  // Fix #4: Fix field click navigation - Run immediately
+  console.log('Installing field click fix...');
+  fixFieldClickNavigation();
 });
 
 function enhanceGrowerFarmRows() {
@@ -128,21 +130,71 @@ function enhanceGrowerFarmRows() {
 }
 
 function fixFieldClickNavigation() {
-  // Override field click to navigate to field details, not settings
-  const fieldElements = document.querySelectorAll('.field');
-  fieldElements.forEach(el => {
-    el.onclick = function(e) {
-      e.stopPropagation();
-      const fieldId = this.dataset.fieldId || this.getAttribute('data-id');
-      if(fieldId) {
-        CURRENT_PAGE = 'fielddetail';
-        CURRENT_FIELD_ID = fieldId;
-        if(typeof renderFieldDetails === 'function') {
-          renderFieldDetails(fieldId);
-        }
+  console.log('Setting up field click navigation...');
+  
+  // Use native DOM since jQuery $ is not jQuery in this app
+  document.addEventListener('click', function(e) {
+    // Check if clicked element or parent is a field
+    let fieldEl = e.target.closest('.field');
+    
+    if(!fieldEl) return;
+    
+    console.log('Field element clicked!', fieldEl);
+    
+    // Extract field ID from onclick attribute: navField('ID')
+    const onclickAttr = fieldEl.getAttribute('onclick');
+    console.log('onclick attribute:', onclickAttr);
+    
+    let fieldId = null;
+    
+    // Try to extract ID from onclick="navField('ID')"
+    if(onclickAttr) {
+      const match = onclickAttr.match(/navField\('([^']+)'\)/);
+      if(match && match[1]) {
+        fieldId = match[1];
+        console.log('Field ID extracted from onclick:', fieldId);
       }
-    };
-  });
+    }
+    
+    // Fallback to data attributes if not found in onclick
+    if(!fieldId) {
+      fieldId = fieldEl.getAttribute('data-field-id') || 
+                fieldEl.getAttribute('data-id') ||
+                fieldEl.dataset.fieldId ||
+                fieldEl.id;
+      
+      if(fieldId && fieldId.startsWith('fld-')) {
+        fieldId = fieldId.replace('fld-', '');
+        console.log('Field ID extracted from element ID:', fieldId);
+      }
+    }
+    
+    console.log('Final field ID:', fieldId);
+    
+    if(!fieldId) {
+      console.warn('Could not find field ID on element');
+      return;
+    }
+    
+    // CRITICAL: Stop the onclick handler from running
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // CRITICAL: Call navField() FIRST before anything else
+    if(typeof window.navField === 'function') {
+      console.log('Calling navField with ID:', fieldId);
+      window.navField(fieldId);
+    } else {
+      console.error('navField function not found on window');
+    }
+    
+    // Make sure we're NOT in settings page anymore
+    window.CURRENT_PAGE = 'fielddetail';
+    console.log('Set CURRENT_PAGE to fielddetail');
+    
+  }, true); // Use capture phase to catch it early
+  
+  console.log('Field click handler installed');
 }
 
 </script>
