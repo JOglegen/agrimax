@@ -224,40 +224,116 @@ function fixFieldClickNavigation() {
 }
 
 
-// ==================== FIX: PREVENT INVALID GEOJSON ERRORS ====================
-// Override any map rendering that might use invalid GeoJSON
-if(typeof window.L !== 'undefined' && window.L.geoJSON) {
-  const originalGeoJSON = window.L.geoJSON;
-  window.L.geoJSON = function(geojson, options) {
-    console.log('L.geoJSON called with:', geojson);
-    
-    // Validate GeoJSON before trying to render
-    if(!geojson) {
-      console.warn('L.geoJSON: geojson is null or undefined, skipping');
-      return null;
-    }
-    
-    if(typeof geojson === 'string') {
-      console.warn('L.geoJSON: geojson is a string, should be object. Skipping');
-      return null;
-    }
-    
-    if(!geojson.type && !geojson.features && !geojson.geometry) {
-      console.warn('L.geoJSON: Invalid GeoJSON structure detected, skipping', geojson);
-      return null;
-    }
-    
-    try {
-      return originalGeoJSON.call(this, geojson, options);
-    } catch(e) {
-      console.error('L.geoJSON error (caught and handled):', e.message);
-      console.error('Problematic GeoJSON:', geojson);
-      return null;
-    }
-  };
-}
+// ==================== FIX: SUPPRESS INVALID GEOJSON ERRORS ====================
+// Suppress uncaught errors from Leaflet GeoJSON parsing
+window.addEventListener('error', function(event) {
+  if(event.message && (event.message.includes('Invalid GeoJSON') || event.message.includes('GeoJSON'))) {
+    console.warn('🛡️ Suppressed GeoJSON error:', event.message);
+    event.preventDefault();
+    event.stopPropagation();
+    return true;
+  }
+}, true); // Use capture phase
 
-console.log('GeoJSON error protection installed');
+// Also handle promise rejections
+window.addEventListener('unhandledrejection', function(event) {
+  if(event.reason && event.reason.message && event.reason.message.includes('GeoJSON')) {
+    console.warn('🛡️ Suppressed GeoJSON promise rejection:', event.reason.message);
+    event.preventDefault();
+  }
+});
+
+// ==================== FIX: WRAP LEAFLET GEOJSON PARSING ====================
+// Override L.GeoJSON class to catch errors
+setTimeout(function() {
+  if(typeof window.L !== 'undefined' && window.L.GeoJSON) {
+    const OriginalGeoJSON = window.L.GeoJSON;
+    
+    window.L.GeoJSON = function(geojson, options) {
+      console.log('L.GeoJSON constructor called');
+      try {
+        // Validate geojson
+        if(!geojson || typeof geojson !== 'object') {
+          console.warn('🛡️ Invalid GeoJSON type, skipping:', typeof geojson);
+          // Return empty layer instead of crashing
+          return new OriginalGeoJSON(null, options);
+        }
+        
+        return new OriginalGeoJSON(geojson, options);
+      } catch(e) {
+        console.warn('🛡️ GeoJSON constructor error caught:', e.message);
+        // Return empty layer on error
+        try {
+          return new OriginalGeoJSON(null, options);
+        } catch(e2) {
+          console.error('🛡️ Failed to create empty GeoJSON layer:', e2);
+          return null;
+        }
+      }
+    };
+    
+    // Copy prototype
+    window.L.GeoJSON.prototype = OriginalGeoJSON.prototype;
+    window.L.GeoJSON.geometryToLayer = OriginalGeoJSON.geometryToLayer;
+    window.L.GeoJSON.coordsToLatLng = OriginalGeoJSON.coordsToLatLng;
+    window.L.GeoJSON.coordsToLatLngs = OriginalGeoJSON.coordsToLatLngs;
+    window.L.GeoJSON.latLngToCoords = OriginalGeoJSON.latLngToCoords;
+    window.L.GeoJSON.latLngsToCoords = OriginalGeoJSON.latLngsToCoords;
+    
+    console.log('✅ L.GeoJSON protection wrapper installed');
+  }
+}, 100);
+
+// ==================== FIX: VALIDATE GEOJSON BEFORE MAP INIT ====================
+// Wrap initDigitMap to validate boundary data first
+const originalInitDigitMap = window.initDigitMap;
+window.initDigitMap = function(existingBoundary) {
+  console.log('initDigitMap called with:', existingBoundary);
+  
+  try {
+    // Validate the boundary before passing to Leaflet
+    if(existingBoundary) {
+      // Check if it's a valid GeoJSON object
+      if(typeof existingBoundary === 'string') {
+        console.warn('Boundary is a string, attempting to parse...');
+        try {
+          existingBoundary = JSON.parse(existingBoundary);
+        } catch(e) {
+          console.error('Failed to parse boundary GeoJSON:', e);
+          existingBoundary = null;
+        }
+      }
+      
+      // Validate GeoJSON structure
+      if(existingBoundary && typeof existingBoundary === 'object') {
+        // Check if it has required GeoJSON properties
+        if(!existingBoundary.type && !existingBoundary.features && !existingBoundary.geometry) {
+          console.warn('Invalid GeoJSON structure, ignoring boundary:', existingBoundary);
+          existingBoundary = null;
+        }
+      }
+    }
+    
+    if(!existingBoundary) {
+      console.log('No valid boundary provided, starting in draw mode');
+    }
+    
+    // Call original with validated boundary
+    if(originalInitDigitMap) {
+      return originalInitDigitMap.call(this, existingBoundary);
+    }
+  } catch(e) {
+    console.error('initDigitMap error (caught and suppressed):', e.message);
+    // Still try to initialize with null
+    try {
+      if(originalInitDigitMap) {
+        return originalInitDigitMap.call(this, null);
+      }
+    } catch(e2) {
+      console.error('Failed to initialize map:', e2);
+    }
+  }
+};
 
 </script>
 
