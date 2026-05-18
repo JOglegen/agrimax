@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriMax V35 - Issues & Features</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+            background: linear-gradient(135deg, #f2f5ee 0%, #e8f4e8 100%);
+            color: #1a2417;
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1e5631 0%, #14401e 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,.15);
+        }
+        
+        header h1 {
+            font-size: 36px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        header p {
+            font-size: 14px;
+            opacity: 0.95;
+            margin-bottom: 20px;
+        }
+        
+        .header-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            opacity: 0.85;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 50px;
+            margin-bottom: 25px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e5631;
+            border-bottom: 3px solid;
+            padding-bottom: 12px;
+        }
+        
+        .section-header.critical { border-color: #ff6b6b; }
+        .section-header.high { border-color: #ff9500; }
+        .section-header.medium { border-color: #ffc107; }
+        .section-header.low { border-color: #6BCB77; }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge.critical { background: #ff6b6b; color: white; }
+        .badge.high { background: #ff9500; color: white; }
+        .badge.medium { background: #ffc107; color: #333; }
+        .badge.low { background: #6BCB77; color: white; }
+        .badge.bug { background: #ffe6e6; color: #c00000; }
+        .badge.feature { background: #e6f2ff; color: #0070c0; }
+        
+        .issues-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .issue-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .issue-card:hover {
+            box-shadow: 0 6px 16px rgba(0,0,0,.12);
+            transform: translateY(-2px);
+        }
+        
+        .issue-card.critical { border-left-color: #ff6b6b; }
+        .issue-card.high { border-left-color: #ff9500; }
+        .issue-card.medium { border-left-color: #ffc107; }
+        .issue-card.low { border-left-color: #6BCB77; }
+        
+        .issue-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        
+        .issue-number {
+            background: #f0f4ec;
+            color: #1e5631;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        .issue-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a2417;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        
+        .issue-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .issue-description {
+            font-size: 13px;
+            color: #5a6b52;
+            margin-bottom: 12px;
+            flex-grow: 1;
+            line-height: 1.5;
+        }
+        
+        .issue-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 12px;
+            border-top: 1px solid #e0e5dc;
+            font-size: 12px;
+        }
+        
+        .time-estimate {
+            background: #e8f4e8;
+            color: #1e5631;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            background: #f0f4ec;
+            color: #5a6b52;
+        }
+        
+        .roadmap {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-top: 40px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        }
+        
+        .roadmap h3 {
+            color: #1e5631;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .phase {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #e0e5dc;
+        }
+        
+        .phase:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .phase-badge {
+            background: #1e5631;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 12px;
+            height: fit-content;
+            white-space: nowrap;
+            min-width: 120px;
+            text-align: center;
+        }
+        
+        .phase-content {
+            flex: 1;
+        }
+        
+        .phase-title {
+            font-weight: 700;
+            color: #1a2417;
+            margin-bottom: 8px;
+        }
+        
+        .phase-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .phase-item {
+            background: #f0f4ec;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #5a6b52;
+        }
+        
+        .summary-boxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .summary-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+            border-top: 4px solid;
+        }
+        
+        .summary-box.critical { border-top-color: #ff6b6b; }
+        .summary-box.high { border-top-color: #ff9500; }
+        .summary-box.medium { border-top-color: #ffc107; }
+        .summary-box.low { border-top-color: #6BCB77; }
+        
+        .summary-box h4 {
+            color: #1e5631;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .summary-box .number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1e5631;
+        }
+        
+        .summary-box .subtext {
+            font-size: 12px;
+            color: #5a6b52;
+            margin-top: 4px;
+        }
+        
+        footer {
+            background: #1a2417;
+            color: #8a9a82;
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 60px;
+            font-size: 12px;
+        }
+        
+        footer a {
+            color: #e8f4e8;
+            text-decoration: none;
+            border-bottom: 1px solid #e8f4e8;
+        }
+        
+        footer a:hover {
+            color: #1e5631;
+            background: #e8f4e8;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #1e5631;
+            background: white;
+            color: #1e5631;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: #1e5631;
+            color: white;
+        }
+        
+        .github-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: #1e5631;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .github-link:hover {
+            background: #14401e;
+            box-shadow: 0 4px 12px rgba(30,86,49,.3);
+        }
+        
+        @media (max-width: 768px) {
+            header h1 { font-size: 24px; }
+            .issues-grid { grid-template-columns: 1fr; }
+            .container { padding: 20px 15px; }
+            .phase { flex-direction: column; }
+            .phase-badge { min-width: auto; }
+            .summary-boxes { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🌾 AgriMax V35</h1>
+    <p>Issues & Features Roadmap</p>
+    <div class="header-stats">
+        <div class="stat-item">
+            <span class="stat-number">13</span>
+            <span class="stat-label">Total Issues</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">25-27</span>
+            <span class="stat-label">Hours Est.</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">3</span>
+            <span class="stat-label">Phases</span>
+        </div>
+    </div>
+</header>
+
+<div class="container">
+    
+    <!-- SUMMARY -->
+    <div class="summary-boxes">
+        <div class="summary-box critical">
+            <h4>🔴 Critical</h4>
+            <div class="number">2</div>
+            <div class="subtext">Must fix before release</div>
+        </div>
+        <div class="summary-box high">
+            <h4>🟠 High Priority</h4>
+            <div class="number">4</div>
+            <div class="subtext">Need to complete soon</div>
+        </div>
+        <div class="summary-box medium">
+            <h4>🟡 Medium Priority</h4>
+            <div class="number">5</div>
+            <div class="subtext">Core feature work</div>
+        </div>
+        <div class="summary-box low">
+            <h4>🟢 Low Priority</h4>
+            <div class="number">2</div>
+            <div class="subtext">Polish & optimization</div>
+        </div>
+    </div>
+
+    <!-- CRITICAL ISSUES -->
+    <div class="section-header critical">
+        🔴 Critical Issues (2)
+    </div>
+    
+    <div class="issues-grid">
+        <!-- Issue #7 -->
+        <div class="issue-card critical">
+            <div class="issue-header">
+                <div class="issue-number">#7</div>
+                <div>
+                    <div class="issue-title">Work Order Field Data Bug</div>
+                    <span class="badge bug">BUG</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge critical">CRITICAL</span>
+                <span class="time-estimate">2-3 hrs</span>
+            </div>
+            <div class="issue-description">
+                New field selected in work order displays wrong lab results and soil summary. Data integrity issue requiring immediate investigation.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Work Orders</span>
+            </div>
+        </div>
+
+        <!-- Issue #2 -->
+        <div class="issue-card critical">
+            <div class="issue-header">
+                <div class="issue-number">#2</div>
+                <div>
+                    <div class="issue-title">JD Boundary Data Missing</div>
+                    <span class="badge bug">BUG</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge high">HIGH</span>
+                <span class="time-estimate">2 hrs</span>
+            </div>
+            <div class="issue-description">
+                Field import from John Deere Operation Center not capturing boundary/polygon data for map display.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Import/Fetch</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- HIGH PRIORITY ISSUES -->
+    <div class="section-header high">
+        🟠 High Priority Issues (4)
+    </div>
+    
+    <div class="issues-grid">
+        <!-- Issue #1 -->
+        <div class="issue-card high">
+            <div class="issue-header">
+                <div class="issue-number">#1</div>
+                <div>
+                    <div class="issue-title">Update Version V34 → V35</div>
+                    <span class="badge bug">BUG</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge high">HIGH</span>
+                <span class="time-estimate">30 min</span>
+            </div>
+            <div class="issue-description">
+                Update application version from V34 to V35 in title, settings, and all UI references.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Settings</span>
+            </div>
+        </div>
+
+        <!-- Issue #4 -->
+        <div class="issue-card high">
+            <div class="issue-header">
+                <div class="issue-number">#4</div>
+                <div>
+                    <div class="issue-title">Settings Nav - Field Click Bug</div>
+                    <span class="badge bug">BUG</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge high">HIGH</span>
+                <span class="time-estimate">45 min</span>
+            </div>
+            <div class="issue-description">
+                Clicking field level in settings stays on settings page instead of navigating to field details.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Settings</span>
+            </div>
+        </div>
+
+        <!-- Issue #13 -->
+        <div class="issue-card high">
+            <div class="issue-header">
+                <div class="issue-number">#13</div>
+                <div>
+                    <div class="issue-title">Password Reset Email for Users</div>
+                    <span class="badge feature">FEATURE</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge high">HIGH</span>
+                <span class="time-estimate">2 hrs</span>
+            </div>
+            <div class="issue-description">
+                Admin ability to send password reset emails to users for account management and support.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Users</span>
+            </div>
+        </div>
+
+        <!-- Issue #3 -->
+        <div class="issue-card high">
+            <div class="issue-header">
+                <div class="issue-number">#3</div>
+                <div>
+                    <div class="issue-title">Delete Grower & Farm</div>
+                    <span class="badge feature">FEATURE</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge medium">MEDIUM</span>
+                <span class="time-estimate">1.5 hrs</span>
+            </div>
+            <div class="issue-description">
+                Add ability to delete growers and farms with double confirmation and cascade delete of child records.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Settings</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MEDIUM PRIORITY ISSUES -->
+    <div class="section-header medium">
+        🟡 Medium Priority Issues (5)
+    </div>
+    
+    <div class="issues-grid">
+        <!-- Issue #5 -->
+        <div class="issue-card medium">
+            <div class="issue-header">
+                <div class="issue-number">#5</div>
+                <div>
+                    <div class="issue-title">Search - Digitizing Module</div>
+                    <span class="badge feature">FEATURE</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge medium">MEDIUM</span>
+                <span class="time-estimate">1 hr</span>
+            </div>
+            <div class="issue-description">
+                Add search functionality to digitizing module to filter and find fields by name or ID.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Digitizing</span>
+            </div>
+        </div>
+
+        <!-- Issue #6 -->
+        <div class="issue-card medium">
+            <div class="issue-header">
+                <div class="issue-number">#6</div>
+                <div>
+                    <div class="issue-title">Improve Work Orders Search</div>
+                    <span class="badge feature">FEATURE</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge medium">MEDIUM</span>
+                <span class="time-estimate">2 hrs</span>
+            </div>
+            <div class="issue-description">
+                Enhance work order search with filters (status, grower, farm), sorting, and date range options.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Work Orders</span>
+            </div>
+        </div>
+
+        <!-- Issue #8 -->
+        <div class="issue-card medium">
+            <div class="issue-header">
+                <div class="issue-number">#8</div>
+                <div>
+                    <div class="issue-title">Recommendations Map View</div>
+                    <span class="badge feature">FEATURE</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge medium">MEDIUM</span>
+                <span class="time-estimate">3 hrs</span>
+            </div>
+            <div class="issue-description">
+                Add recommendation map view to field details page showing surfaces, plant dates, harvest dates, etc.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Field Details</span>
+            </div>
+        </div>
+
+        <!-- Issue #10 -->
+        <div class="issue-card medium">
+            <div class="issue-header">
+                <div class="issue-number">#10</div>
+                <div>
+                    <div class="issue-title">User Password Change</div>
+                    <span class="badge feature">FEATURE</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge medium">MEDIUM</span>
+                <span class="time-estimate">1.5 hrs</span>
+            </div>
+            <div class="issue-description">
+                Allow users to change their own password in settings with current password verification.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Settings</span>
+            </div>
+        </div>
+
+        <!-- Issue #9 -->
+        <div class="issue-card medium">
+            <div class="issue-header">
+                <div class="issue-number">#9</div>
+                <div>
+                    <div class="issue-title">Remove RX Export Labels</div>
+                    <span class="badge feature">FEATURE</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge low">LOW</span>
+                <span class="time-estimate">1 hr</span>
+            </div>
+            <div class="issue-description">
+                Remove text labels (P2O5, DAP) from RX text file export, show only lbs/ac values.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Export</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOW PRIORITY ISSUES -->
+    <div class="section-header low">
+        🟢 Low Priority Issues (2)
+    </div>
+    
+    <div class="issues-grid">
+        <!-- Issue #11 -->
+        <div class="issue-card low">
+            <div class="issue-header">
+                <div class="issue-number">#11</div>
+                <div>
+                    <div class="issue-title">Auto-Collapse Avg Nutrients</div>
+                    <span class="badge feature">FEATURE</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge low">LOW</span>
+                <span class="time-estimate">45 min</span>
+            </div>
+            <div class="issue-description">
+                Dashboard should auto-collapse "Avg Nutrients" section on page load to save screen space.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Dashboard</span>
+            </div>
+        </div>
+
+        <!-- Issue #12 -->
+        <div class="issue-card low">
+            <div class="issue-header">
+                <div class="issue-number">#12</div>
+                <div>
+                    <div class="issue-title">Sampler Email Notifications</div>
+                    <span class="badge feature">FEATURE</span>
+                </div>
+            </div>
+            <div class="issue-meta">
+                <span class="badge low">LOW</span>
+                <span class="time-estimate">1 hr</span>
+            </div>
+            <div class="issue-description">
+                Clarify and implement email notification settings for sampler role in system.
+            </div>
+            <div class="issue-footer">
+                <span class="status-badge">Open</span>
+                <span style="color: #5a6b52;">Users</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROADMAP -->
+    <div class="roadmap">
+        <h3>📋 Development Roadmap</h3>
+        
+        <div class="phase">
+            <div class="phase-badge">Phase 1<br>THIS SPRINT</div>
+            <div class="phase-content">
+                <div class="phase-title">🔴 Critical Fixes (9-10 hours)</div>
+                <p style="font-size: 13px; color: #5a6b52; margin-bottom: 12px;">
+                    Must-have fixes for data integrity and core functionality
+                </p>
+                <div class="phase-items">
+                    <div class="phase-item">#7 - Work Order Data Bug</div>
+                    <div class="phase-item">#2 - JD Boundaries</div>
+                    <div class="phase-item">#1 - Version Update</div>
+                    <div class="phase-item">#4 - Settings Nav</div>
+                    <div class="phase-item">#13 - Password Reset</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="phase">
+            <div class="phase-badge">Phase 2<br>NEXT SPRINT</div>
+            <div class="phase-content">
+                <div class="phase-title">🟠 Core Features (9-10 hours)</div>
+                <p style="font-size: 13px; color: #5a6b52; margin-bottom: 12px;">
+                    Important features for user workflow and satisfaction
+                </p>
+                <div class="phase-items">
+                    <div class="phase-item">#3 - Delete Grower/Farm</div>
+                    <div class="phase-item">#5 - Digitizing Search</div>
+                    <div class="phase-item">#6 - WO Search Improve</div>
+                    <div class="phase-item">#8 - Recommendations Map</div>
+                    <div class="phase-item">#10 - Change Password</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="phase">
+            <div class="phase-badge">Phase 3<br>FUTURE</div>
+            <div class="phase-content">
+                <div class="phase-title">🟡 Polish & Optimization (3-4 hours)</div>
+                <p style="font-size: 13px; color: #5a6b52; margin-bottom: 12px;">
+                    Nice-to-have improvements and refinements
+                </p>
+                <div class="phase-items">
+                    <div class="phase-item">#9 - RX Label Removal</div>
+                    <div class="phase-item">#11 - Auto-Collapse</div>
+                    <div class="phase-item">#12 - Sampler Emails</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESOURCES -->
+    <div style="background: white; border-radius: 10px; padding: 30px; margin-top: 40px; box-shadow: 0 2px 8px rgba(0,0,0,.08); text-align: center;">
+        <h3 style="color: #1e5631; margin-bottom: 20px; font-size: 20px;">📚 Detailed Documentation</h3>
+        <p style="font-size: 14px; color: #5a6b52; margin-bottom: 25px;">
+            Complete code examples, fixes, and testing guides available in repository
+        </p>
+        <a href="https://github.com/yourusername/agrimax" class="github-link" target="_blank">
+            → View on GitHub
+        </a>
+    </div>
+
+</div>
+
+<footer>
+    <p><strong>AgriMax V35 Issues & Features Roadmap</strong></p>
+    <p style="margin-top: 10px;">
+        Total Estimated Effort: 25-27 hours | 
+        <strong>13 Issues</strong> | 
+        <strong>3 Phases</strong>
+    </p>
+    <p style="margin-top: 15px;">
+        Maintained by Record Harvest Enterprises • Last Updated May 2026
+    </p>
+</footer>
+
+</body>
+</html>
