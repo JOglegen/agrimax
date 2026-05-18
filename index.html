@@ -4158,7 +4158,7 @@ async function navField(id){
 async function navFieldDetail(id){
   CURRENT_FIELD_ID = id;
   CURRENT_PAGE = "field";
-  ["dash","field","imp","isamp","review","sampedit","digit","ilab","surface","wo","wodetail","worecs"].forEach(x => hide("pg-"+x));
+  ["dash","field","imp","isamp","review","sampedit","digit","ilab","surface","wo","wodetail","worecs","settings","mapbook","vraexport","package","users"].forEach(x => hide("pg-"+x));
   show("pg-field");
   const f = DATA.fields.find(x => x.id === id);
   if(!f){ err("Field not found"); return; }
@@ -13537,7 +13537,7 @@ async function navWoRecs(workOrderId){
   if(!w){ err("Work order not found"); return; }
 
   CURRENT_PAGE = "worecs";
-  ["dash","field","imp","isamp","review","sampedit","digit","ilab","surface","wo","wodetail","worecs"].forEach(x => hide("pg-"+x));
+  ["dash","field","imp","isamp","review","sampedit","digit","ilab","surface","wo","wodetail","worecs","settings","mapbook","vraexport","package","users"].forEach(x => hide("pg-"+x));
   show("pg-worecs");
   $("pgtitle").textContent = "Recommendations";
 
@@ -19062,7 +19062,7 @@ async function saveWo(_unused, duplicateAfter){
 function navWoDetail(id){
   WO_DETAIL_ID = id;
   CURRENT_PAGE = "wodetail";
-  ["dash","field","imp","isamp","review","sampedit","digit","ilab","surface","wo","wodetail","worecs"].forEach(x => hide("pg-"+x));
+  ["dash","field","imp","isamp","review","sampedit","digit","ilab","surface","wo","wodetail","worecs","settings","mapbook","vraexport","package","users"].forEach(x => hide("pg-"+x));
   show("pg-wodetail");
   $("pgtitle").textContent = "Work Order";
   renderWoDetail();
@@ -20312,7 +20312,7 @@ async function navSampEdit(fieldId){
 
   CURRENT_PAGE = "sampedit";
   CURRENT_FIELD_ID = fieldId;
-  ["dash","field","imp","isamp","review","sampedit","digit","ilab","surface","wo","wodetail","worecs"].forEach(x => hide("pg-"+x));
+  ["dash","field","imp","isamp","review","sampedit","digit","ilab","surface","wo","wodetail","worecs","settings","mapbook","vraexport","package","users"].forEach(x => hide("pg-"+x));
   show("pg-sampedit");
 
   const farm   = DATA.farms.find(x => x.id === f.farm_id);
@@ -23078,8 +23078,6 @@ async function jdImportSelected(){
   const checkboxes = document.querySelectorAll('[id^="jdf-"]:checked');
   if(checkboxes.length === 0) { alert('No fields selected.'); return; }
 
-  // Resolve retailer_id the same way shapefile import does —
-  // use the only retailer, or prompt if multiple exist.
   if(DATA.retailers.length === 0){
     alert('You need at least one retailer set up first. Go to Settings → Retailers to add one.');
     return;
@@ -23100,10 +23098,8 @@ async function jdImportSelected(){
 
   let imported = 0, skipped = 0;
   const errors = [];
-
-  // Track growers/farms created in this batch to avoid duplicates
-  const createdGrowers = {}; // name → id
-  const createdFarms   = {}; // "growerId|name" → id
+  const createdGrowers = {};
+  const createdFarms   = {};
 
   for(const cb of checkboxes) {
     const idx = parseInt(cb.dataset.idx);
@@ -23111,7 +23107,6 @@ async function jdImportSelected(){
     if(!jdField) continue;
 
     try {
-      // ── Grower ──
       const gname = jdField.jd_org_name;
       let growerId = createdGrowers[gname];
       if(!growerId){
@@ -23129,7 +23124,6 @@ async function jdImportSelected(){
         createdGrowers[gname] = growerId;
       }
 
-      // ── Farm ──
       const farmName = jdField.farm_name || jdField.jd_org_name;
       const farmKey  = growerId + '|' + farmName;
       let farmId = createdFarms[farmKey];
@@ -23148,11 +23142,9 @@ async function jdImportSelected(){
         createdFarms[farmKey] = farmId;
       }
 
-      // ── Field — skip if already exists ──
       const exists = DATA.fields.find(f => f.farm_id === farmId && f.name === jdField.field_name);
       if(exists){ skipped++; continue; }
 
-      // ── Boundary ──
       let boundaryGeoJSON = null;
       if(jdField.boundary_geojson){
         try {
