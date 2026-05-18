@@ -23038,28 +23038,36 @@ async function jdImportFields(){
       return;
     }
 
-    // Group by org
+    // Group by org → farm
     const byOrg = {};
     for(const f of JD_FIELDS) {
-      if(!byOrg[f.jd_org_name]) byOrg[f.jd_org_name] = [];
-      byOrg[f.jd_org_name].push(f);
+      if(!byOrg[f.jd_org_name]) byOrg[f.jd_org_name] = {};
+      const farmKey = f.farm_name || f.jd_org_name;
+      if(!byOrg[f.jd_org_name][farmKey]) byOrg[f.jd_org_name][farmKey] = [];
+      byOrg[f.jd_org_name][farmKey].push(f);
     }
 
     let html = '<div class="card"><div class="ct" style="margin-bottom:10px">Found ' + JD_FIELDS.length + ' field(s) from John Deere</div>';
-    for(const [orgName, fields] of Object.entries(byOrg)) {
-      html += '<div style="margin-bottom:12px">';
+    for(const [orgName, farms] of Object.entries(byOrg)) {
+      html += '<div style="margin-bottom:14px">';
       html += '<div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">' + orgName + '</div>';
-      for(const f of fields) {
-        const idx = JD_FIELDS.indexOf(f);
-        html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr)">';
-        html += '<input type="checkbox" id="jdf-' + idx + '" data-idx="' + idx + '" checked style="width:14px;height:14px">';
-        html += '<div style="flex:1">';
-        html += '<span style="font-size:12px;font-weight:600">' + f.field_name + '</span>';
-        html += '<span style="font-size:11px;color:var(--tx3);margin-left:8px">' + (f.acres ? f.acres.toFixed(1) + ' ac' : '') + '</span>';
-        html += f.boundary_geojson
-          ? '<span style="font-size:10px;color:#1e5631;margin-left:8px">✓ boundary</span>'
-          : '<span style="font-size:10px;color:var(--tx3);margin-left:8px">no boundary</span>';
-        html += '</div></div>';
+      for(const [farmName, fields] of Object.entries(farms)) {
+        // Only show farm subheading if it differs from org name
+        if(farmName !== orgName){
+          html += '<div style="font-size:10.5px;font-weight:600;color:var(--tx3);margin:6px 0 3px 4px">🌾 ' + farmName + '</div>';
+        }
+        for(const f of fields) {
+          const idx = JD_FIELDS.indexOf(f);
+          html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0 5px 12px;border-bottom:1px solid var(--bdr)">';
+          html += '<input type="checkbox" id="jdf-' + idx + '" data-idx="' + idx + '" checked style="width:14px;height:14px">';
+          html += '<div style="flex:1">';
+          html += '<span style="font-size:12px;font-weight:600">' + f.field_name + '</span>';
+          html += '<span style="font-size:11px;color:var(--tx3);margin-left:8px">' + (f.acres ? f.acres.toFixed(1) + ' ac' : '') + '</span>';
+          html += f.boundary_geojson
+            ? '<span style="font-size:10px;color:#1e5631;margin-left:8px">✓ boundary</span>'
+            : '<span style="font-size:10px;color:var(--tx3);margin-left:8px">no boundary</span>';
+          html += '</div></div>';
+        }
       }
       html += '</div>';
     }

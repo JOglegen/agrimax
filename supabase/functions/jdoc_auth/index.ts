@@ -63,8 +63,7 @@ async function jdFetch(url: string, token: string): Promise<any> {
   return res.json();
 }
 
-// Follow nextPage links until all results are collected.
-// JD defaults to 10 items/page — this gets every page automatically.
+// Follow nextPage links — JD defaults to 10 items/page
 async function jdFetchAll(firstUrl: string, token: string): Promise<any[]> {
   const allValues: any[] = [];
   let url: string | null = firstUrl;
@@ -74,7 +73,6 @@ async function jdFetchAll(firstUrl: string, token: string): Promise<any[]> {
     const data = await jdFetch(url, token);
     const values = data.values || [];
     allValues.push(...values);
-    console.log(`  Page ${pageCount}: ${values.length} items (running total: ${allValues.length})`);
     const nextLink = (data.links || []).find((l: any) => l.rel === "nextPage");
     url = nextLink?.uri || null;
   }
@@ -99,7 +97,7 @@ serve(async (req) => {
     const serviceKey   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     const body = await req.json();
-    const { action, org_id } = body;
+    const { action, org_id, field_id, jd_org_id } = body;
     console.log("jdoc_data action:", action, "org_id:", org_id);
 
     const supa = createClient(supabaseUrl, serviceKey);
@@ -121,6 +119,9 @@ serve(async (req) => {
     }
 
     // ── list_fields ───────────────────────────────────────────────────
+    // Strategy: org → farms → fields per farm (captures farm name).
+    // Falls back to org → fields directly if farms endpoint fails or
+    // returns nothing (some orgs don't use farms).
     if (action === "list_fields") {
       const allOrgs = await jdFetchAll(`${JDOC_API}/organizations`, token);
       console.log(`Found ${allOrgs.length} total orgs`);
@@ -129,48 +130,84 @@ serve(async (req) => {
       const errors: string[] = [];
 
       for (const org of allOrgs) {
-        const fieldsUrl =
-          findLink(org.links, "fields") ||
-          `${JDOC_API}/organizations/${org.id}/fields`;
-
         console.log(`Org: ${org.name} (${org.id})`);
 
-        let fields: any[];
+        // ── Try farms endpoint first ──────────────────────────────────
+        const farmsUrl =
+          findLink(org.links, "farms") ||
+          `${JDOC_API}/organizations/${org.id}/farms`;
+
+        let farms: any[] = [];
         try {
-          fields = await jdFetchAll(fieldsUrl, token);
+          farms = await jdFetchAll(farmsUrl, token);
+          console.log(`  -> ${farms.length} farms`);
         } catch (e: any) {
-          console.warn(`Fields failed for org ${org.id}: ${e.message}`);
-          errors.push(`${org.name}: ${e.message}`);
-          continue;
+          console.warn(`  Farms endpoint failed for org ${org.id}: ${e.message} — will try flat fields`);
         }
 
-        console.log(`  → ${fields.length} fields`);
+        if (farms.length > 0) {
+          // ── Fields via farms (preferred — gives farm name) ──────────
+          for (const farm of farms) {
+            const farmFieldsUrl =
+              findLink(farm.links, "fields") ||
+              `${JDOC_API}/organizations/${org.id}/farms/${farm.id}/fields`;
 
-        for (const field of fields) {
-          let boundaryGeoJson = null;
-          try {
-            const boundaryUrl =
-              findLink(field.links, "boundaries") ||
-              `${JDOC_API}/organizations/${org.id}/fields/${field.id}/boundaries`;
-            const boundaryData = await jdFetch(boundaryUrl, token);
-            const boundaries = boundaryData.values || [];
-            const active = boundaries.find((b: any) => b.active) || boundaries[0];
-            if (active?.multipolygons?.[0]) {
-              boundaryGeoJson = active.multipolygons[0];
+            let farmFields: any[] = [];
+            try {
+              farmFields = await jdFetchAll(farmFieldsUrl, token);
+            } catch (e: any) {
+              console.warn(`  Fields failed for farm ${farm.id}: ${e.message}`);
+              errors.push(`${org.name} / ${farm.name}: ${e.message}`);
+              continue;
             }
+
+            console.log(`    Farm "${farm.name}": ${farmFields.length} fields`);
+
+            for (const field of farmFields) {
+              allFields.push({
+                jd_org_id:        org.id,
+                jd_org_name:      org.name,
+                jd_farm_id:       farm.id,
+                farm_name:        farm.name,
+                jd_field_id:      field.id,
+                field_name:       field.name,
+                acres:            field.area?.valueAsDouble || null,
+                boundary_geojson: null,
+                links:            field.links,
+              });
+            }
+          }
+        } else {
+          // ── Fallback: flat fields list (no farm grouping) ───────────
+          // Farm name falls back to org name in jdImportSelected.
+          const fieldsUrl =
+            findLink(org.links, "fields") ||
+            `${JDOC_API}/organizations/${org.id}/fields`;
+
+          let fields: any[] = [];
+          try {
+            fields = await jdFetchAll(fieldsUrl, token);
           } catch (e: any) {
-            console.warn(`  Boundary failed for field ${field.id}: ${e.message}`);
+            console.warn(`  Fields failed for org ${org.id}: ${e.message}`);
+            errors.push(`${org.name}: ${e.message}`);
+            continue;
           }
 
-          allFields.push({
-            jd_org_id:        org.id,
-            jd_org_name:      org.name,
-            jd_field_id:      field.id,
-            field_name:       field.name,
-            acres:            field.area?.valueAsDouble || null,
-            boundary_geojson: boundaryGeoJson,
-            links:            field.links,
-          });
+          console.log(`  -> ${fields.length} fields (flat, no farm)`);
+
+          for (const field of fields) {
+            allFields.push({
+              jd_org_id:        org.id,
+              jd_org_name:      org.name,
+              jd_farm_id:       null,
+              farm_name:        null,   // will fall back to org name on import
+              jd_field_id:      field.id,
+              field_name:       field.name,
+              acres:            field.area?.valueAsDouble || null,
+              boundary_geojson: null,
+              links:            field.links,
+            });
+          }
         }
       }
 
@@ -180,6 +217,29 @@ serve(async (req) => {
         count:  allFields.length,
         errors: errors.length > 0 ? errors : undefined,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── get_field_boundary ────────────────────────────────────────────
+    if (action === "get_field_boundary") {
+      if (!jd_org_id || !field_id) {
+        return new Response(JSON.stringify({ error: "jd_org_id and field_id required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      try {
+        const boundaryUrl = `${JDOC_API}/organizations/${jd_org_id}/fields/${field_id}/boundaries`;
+        const boundaryData = await jdFetch(boundaryUrl, token);
+        const boundaries = boundaryData.values || [];
+        const active = boundaries.find((b: any) => b.active) || boundaries[0];
+        const geojson = active?.multipolygons?.[0] || null;
+        return new Response(JSON.stringify({ boundary_geojson: geojson }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
