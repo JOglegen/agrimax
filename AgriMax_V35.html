@@ -100,17 +100,30 @@ window.jdFetchFields = async function() {
 
 // ==================== INITIALIZE FIXES ON PAGE LOAD ====================
 window.addEventListener('DOMContentLoaded', function() {
-  // Fix #1: Update title with version constant (already done above)
+  console.log('AgriMax V35 fixes initializing...');
+  
+  // Fix #1: Version already updated in title
   
   // Fix #3: Add delete buttons to grower/farm rows
   setTimeout(function() {
+    console.log('Enhancing grower/farm rows...');
     enhanceGrowerFarmRows();
   }, 500);
   
-  // Fix #4: Fix field click navigation
-  setTimeout(function() {
-    fixFieldClickNavigation();
-  }, 500);
+  // Fix #4: Fix field click navigation - Run immediately
+  console.log('Installing field click fix...');
+  fixFieldClickNavigation();
+  
+  // Re-install after settings render
+  if(typeof window.renderSettingsPage === 'function') {
+    const originalRenderSettings = window.renderSettingsPage;
+    window.renderSettingsPage = function() {
+      console.log('Settings page rendered, reapplying field click fix...');
+      const result = originalRenderSettings.call(this);
+      setTimeout(fixFieldClickNavigation, 100);
+      return result;
+    };
+  }
 });
 
 function enhanceGrowerFarmRows() {
@@ -128,31 +141,49 @@ function enhanceGrowerFarmRows() {
 }
 
 function fixFieldClickNavigation() {
-  // Override field click to navigate to field details, not settings
-  // This runs on document to catch all field clicks
+  console.log('Setting up field click navigation...');
+  
+  // Use native DOM since jQuery $ is not jQuery in this app
   document.addEventListener('click', function(e) {
-    const fieldEl = e.target.closest('.field');
-    if(fieldEl) {
-      e.stopPropagation();
-      
-      // Get field ID from various possible attributes
-      const fieldId = fieldEl.dataset.fieldId || 
-                      fieldEl.getAttribute('data-id') || 
-                      fieldEl.getAttribute('data-field-id');
-      
-      if(fieldId) {
-        // CRITICAL: Clear current page and set to fielddetail
-        CURRENT_PAGE = 'fielddetail';
-        CURRENT_FIELD_ID = fieldId;
-        
-        // Make sure renderFieldDetails exists and call it
-        if(typeof renderFieldDetails === 'function') {
-          renderFieldDetails(fieldId);
-          return false;
-        }
-      }
+    // Check if clicked element or parent is a field
+    let fieldEl = e.target.closest('.field');
+    
+    if(!fieldEl) return;
+    
+    console.log('Field element clicked!', fieldEl);
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // Get field ID from data attributes
+    let fieldId = fieldEl.getAttribute('data-field-id') || 
+                  fieldEl.getAttribute('data-id') ||
+                  fieldEl.dataset.fieldId;
+    
+    console.log('Field ID found:', fieldId);
+    
+    if(!fieldId) {
+      console.warn('Could not find field ID on element');
+      return false;
     }
-  }, true); // Use capture phase to ensure we catch it first
+    
+    // Set navigation variables
+    window.CURRENT_PAGE = 'fielddetail';
+    window.CURRENT_FIELD_ID = fieldId;
+    
+    console.log('Set CURRENT_PAGE to fielddetail, CURRENT_FIELD_ID to', fieldId);
+    
+    // Call render function if it exists
+    if(typeof window.renderFieldDetails === 'function') {
+      console.log('Calling renderFieldDetails...');
+      window.renderFieldDetails(fieldId);
+    } else {
+      console.error('renderFieldDetails function not found on window');
+    }
+    
+    return false;
+  }, true); // Use capture phase to catch it early
+  
+  console.log('Field click handler installed');
 }
 
 </script>
