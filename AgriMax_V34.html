@@ -3,23 +3,18 @@
 <head>
 <script>
 (async function jdCallbackHandler(){
+  if(window.location.pathname !== '/callback') return;
+  const SUPABASE_URL = 'https://dkmfjtfdfuuouhcuhoer.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_wSJWe5ieVE7vXFnRKtUjcw_6K_V74z8';
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
   const state = params.get('state');
-  if(!code || !state) return;
-  try {
-    const decoded = JSON.parse(atob(state));
-    if(!decoded.org_id) return;
-  } catch(_) { return; }
-
-  const SUPABASE_URL = 'https://dkmfjtfdfuuouhcuhoer.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_wSJWe5ieVE7vXFnRKtUjcw_6K_V74z8';
   const errorMsg = params.get('error');
-
   document.documentElement.innerHTML = '<!DOCTYPE html><html><head><meta charset=UTF-8><style>body{font-family:Segoe UI,system-ui,sans-serif;background:#1e5631;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.box{background:#fff;border-radius:16px;padding:36px 32px;max-width:380px;width:100%;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,.3)}h2{color:#1e5631;margin-bottom:8px;font-size:20px}p{color:#5a6b52;font-size:13px}.spinner{width:32px;height:32px;border:3px solid #e8f4e8;border-top-color:#1e5631;border-radius:50%;animation:spin 0.8s linear infinite;margin:16px auto}@keyframes spin{to{transform:rotate(360deg)}}.err{color:#922b21;background:#fdecea;border:1px solid #f5b7b1;border-radius:8px;padding:10px;font-size:12px;margin-top:12px}</style></head><body><div class=box><h2>Connecting John Deere</h2><div class=spinner></div><p id=msg>Exchanging authorization code...</p><div id=err></div></div></body></html>';
   function setMsg(t){ document.getElementById('msg').textContent=t; }
   function setErr(t){ document.getElementById('err').innerHTML='<div class=err>'+t+'</div>'; document.getElementById('msg').textContent='Connection failed.'; }
   if(errorMsg){ setErr('John Deere error: '+errorMsg); setTimeout(()=>location.href='/',4000); return; }
+  if(!code){ setErr('No authorization code received.'); setTimeout(()=>location.href='/',4000); return; }
   try {
     setMsg('Storing connection...');
     const res = await fetch(SUPABASE_URL+'/functions/v1/jdoc_auth',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY},body:JSON.stringify({action:'exchange_code',code,state})});
@@ -5873,21 +5868,18 @@ async function surfRender(){
              minLng: minLng - padLng, maxLng: maxLng + padLng };
   }
 
-  const cellSizeM = parseFloat($("surf-cellsize")?.value || "5");
-  const M_PER_DEG_LAT_SURF = 111320;
-  const midLat = (bbox.minLat + bbox.maxLat) / 2;
-  const mPerDegLng = M_PER_DEG_LAT_SURF * Math.cos(midLat * Math.PI / 180);
+  const TARGET = 150;
   const dLat = bbox.maxLat - bbox.minLat;
   const dLng = bbox.maxLng - bbox.minLng;
-  const stepLat = cellSizeM / M_PER_DEG_LAT_SURF;
-  const stepLng = cellSizeM / mPerDegLng;
-  const MAX_CELLS = 600;
-  const cols = Math.max(10, Math.min(MAX_CELLS, Math.ceil(dLng / stepLng)));
-  const rows = Math.max(10, Math.min(MAX_CELLS, Math.ceil(dLat / stepLat)));
-  if(cols === MAX_CELLS || rows === MAX_CELLS){
-    const effectiveM = Math.max(dLat / MAX_CELLS * M_PER_DEG_LAT_SURF, dLng / MAX_CELLS * mPerDegLng);
-    $("surf-status").textContent = `⚠ Field too large for ${cellSizeM}m cells — using ~${Math.round(effectiveM)}m effective cell size. Select a coarser resolution to improve accuracy.`;
-    await new Promise(r => setTimeout(r, 10));
+  const latToLngRatio = Math.cos((bbox.minLat + bbox.maxLat) / 2 * Math.PI / 180);
+  const aspect = (dLng * latToLngRatio) / dLat;
+  let cols, rows;
+  if(aspect >= 1){
+    cols = TARGET;
+    rows = Math.max(20, Math.round(TARGET / aspect));
+  } else {
+    rows = TARGET;
+    cols = Math.max(20, Math.round(TARGET * aspect));
   }
 
   const canvas = document.createElement("canvas");
@@ -5966,7 +5958,7 @@ async function surfRender(){
   surfRefreshLabels();
 
   const ms = Math.round(performance.now() - t0);
-  $("surf-status").textContent = `${def.label} · ${points.length} samples · ${cellSizeM}m cells · grid ${cols}×${rows} · ${cellsInside.toLocaleString()} cells in field · ${ms} ms`;
+  $("surf-status").textContent = `${def.label} · ${points.length} samples · grid ${cols}×${rows} · ${cellsInside.toLocaleString()} cells in field · ${ms} ms`;
 }
 
 function surfClearLabels(){
@@ -23148,8 +23140,7 @@ async function jdImportSelected(){
     }
   }
 
-  await loadAll();
-  renderTree();
+  renderGrowerTree();
 
   let html = '<div class="card"><div style="font-weight:700;font-size:13px;margin-bottom:8px">Import Complete</div><div style="font-size:12px;color:var(--tx3)">';
   if(imported > 0) html += '<div style="color:#1e5631">✓ ' + imported + ' field(s) imported</div>';
