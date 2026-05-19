@@ -4466,7 +4466,8 @@ async function navField(id){
 async function navFieldDetail(id){
   CURRENT_FIELD_ID = id;
   CURRENT_PAGE = "field";
-  ["dash","field","imp","isamp","review","sampedit","digit","ilab","surface","wo","wodetail","worecs"].forEach(x => hide("pg-"+x));
+  // V35 FIX: Added "settings" to the hide list so settings page disappears when navigating to a field
+  ["dash","field","imp","isamp","review","sampedit","digit","ilab","surface","wo","wodetail","worecs","settings"].forEach(x => hide("pg-"+x));
   show("pg-field");
   const f = DATA.fields.find(x => x.id === id);
   if(!f){ err("Field not found"); return; }
@@ -23435,33 +23436,60 @@ async function jdRunBoundaryFetch(){
     const orgByName = {};
     for(const o of (orgData.organizations || [])) orgByName[o.name] = o.id;
 
+    // V35 DEBUG: Log org names from JD vs grower names in app
+    console.log('JD Org names available:', Object.keys(orgByName));
+    console.log('Fields to fetch boundaries for:', toFetch.map(f => f.growerName + ' / ' + f.jdFieldId));
+
     let done = 0, saved = 0, failed = 0, noGeo = 0;
     const total = toFetch.length;
 
     for(const item of toFetch){
-      const jdOrgId = orgByName[item.growerName];
+      // V35 FIX: Try exact match first, then case-insensitive match
+      let jdOrgId = orgByName[item.growerName];
       if(!jdOrgId){
+        // Try case-insensitive match
+        const lowerName = item.growerName.toLowerCase();
+        const matchKey = Object.keys(orgByName).find(k => k.toLowerCase() === lowerName);
+        if(matchKey) {
+          jdOrgId = orgByName[matchKey];
+          console.log('V35: Fuzzy matched grower "' + item.growerName + '" to JD org "' + matchKey + '"');
+        }
+      }
+      if(!jdOrgId){
+        console.warn('V35: No JD org found for grower "' + item.growerName + '". Available orgs:', Object.keys(orgByName));
         noGeo++; done++;
         setProgress(done, total);
         setStatus(done + '/' + total + ' — skipped "' + item.growerName + '" (not found in JD orgs)');
         continue;
       }
       try {
+        console.log('V35: Fetching boundary for field', item.jdFieldId, 'in org', jdOrgId);
         const res = await fetch(SUPABASE_URL + '/functions/v1/jdoc_data', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
           body: JSON.stringify({ action: 'get_field_boundary', org_id: ORG_ID, jd_org_id: jdOrgId, field_id: item.jdFieldId }),
         });
         const data = await res.json();
+        console.log('V35: Boundary response for', item.jdFieldId, ':', data.boundary_geojson ? 'HAS BOUNDARY' : 'NO BOUNDARY', data.error || '');
         if(data.boundary_geojson){
           const { error } = await supa.from('fields').update({ boundary_geojson: data.boundary_geojson }).eq('id', item.fieldId);
           if(!error){
             const local = DATA.fields.find(f => f.id === item.fieldId);
             if(local) local.boundary_geojson = data.boundary_geojson;
             saved++;
-          } else { failed++; }
-        } else { noGeo++; } // field exists in JD but has no boundary drawn
-      } catch(e){ failed++; }
+            console.log('V35: ✅ Saved boundary for field', item.fieldId);
+          } else { 
+            failed++;
+            console.error('V35: ❌ DB save failed:', error.message);
+          }
+        } else { 
+          noGeo++;
+          console.warn('V35: No boundary in JD for field', item.jdFieldId, data);
+        }
+      } catch(e){ 
+        failed++;
+        console.error('V35: Exception fetching boundary:', e.message);
+      }
       done++;
       setProgress(done, total);
       setStatus(done + '/' + total + ' — ' + saved + ' saved · ' + noGeo + ' no boundary in JD · ' + failed + ' errors');
