@@ -23597,7 +23597,15 @@ async function jdImportSelected(){
       }
       const exists = DATA.fields.find(f => f.farm_id === farmId && f.name === jdField.field_name);
       if(exists){ skipped++; continue; }
-      const ins = await supa.from('fields').insert({ name: jdField.field_name, farm_id: farmId, org_id: ORG_ID, acres: jdField.acres, notes: 'Imported from John Deere (ID: ' + jdField.jd_field_id + ')' }).select().single();
+      // V35 FIX: Save boundary_geojson on import AND keep JD field ID in notes for boundary fetch
+      const ins = await supa.from('fields').insert({
+        name: jdField.field_name,
+        farm_id: farmId,
+        org_id: ORG_ID,
+        acres: jdField.acres,
+        boundary_geojson: jdField.boundary_geojson || null,
+        notes: 'Imported from John Deere (ID: ' + jdField.jd_field_id + ')'
+      }).select().single();
       if(ins.error){ errors.push(jdField.field_name + ': ' + ins.error.message); continue; }
       DATA.fields.push(ins.data); imported++;
     } catch(e) { errors.push(jdField.field_name + ': ' + e.message); }
@@ -23610,6 +23618,10 @@ async function jdImportSelected(){
   html += '<div style="margin-top:8px;font-size:11px;color:var(--tx3)">Click <strong>🗺 Fetch Boundaries</strong> to pull boundaries from John Deere.</div>';
   html += '</div></div>';
   resultsDiv.innerHTML = html;
+  // V35 FIX: Auto-fetch boundaries immediately after import
+  if(imported > 0) {
+    setTimeout(() => jdFetchBoundaries(), 800);
+  }
 }
 
 
