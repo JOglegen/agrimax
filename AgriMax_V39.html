@@ -24277,6 +24277,76 @@ async function mlTestAuth(){
   }
 }
 
+
+// ==================== V35 DEBUG: BOUNDARY DIAGNOSTIC ====================
+// Call window.debugJDBoundary() from browser console to diagnose
+window.debugJDBoundary = async function() {
+  console.log('=== V35 BOUNDARY DIAGNOSTIC ===');
+  
+  // Step 1: Check JD token in DB
+  const { data: jdRow } = await supa
+    .from('jdoc_tokens')
+    .select('*')
+    .eq('org_id', ORG_ID)
+    .single();
+  console.log('JD Token row:', jdRow);
+  if(!jdRow?.access_token) {
+    console.error('❌ No JD access token found! Need to reconnect JD.');
+    return;
+  }
+  console.log('✅ JD token exists, expires:', jdRow.expires_at);
+  
+  // Step 2: Find a JD-imported field to test with
+  const testField = DATA.fields.find(f => f.notes && f.notes.startsWith('Imported from John Deere (ID: '));
+  if(!testField) {
+    console.error('❌ No JD-imported fields found');
+    return;
+  }
+  const match = testField.notes.match(/Imported from John Deere \(ID: ([^)]+)\)/);
+  const jdFieldId = match?.[1];
+  console.log('Testing with field:', testField.name, 'JD ID:', jdFieldId);
+  
+  // Step 3: Call edge function with debug action
+  console.log('Calling jdoc_data get_field_boundary...');
+  const res = await fetch('https://dkmfjtfdfuuouhcuhoer.supabase.co/functions/v1/jdoc_data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': 'sb_publishable_wSJWe5ieVE7vXFnRKtUjcw_6K_V74z8' },
+    body: JSON.stringify({ 
+      action: 'get_field_boundary', 
+      org_id: ORG_ID, 
+      jd_org_id: '287043',
+      field_id: jdFieldId,
+      debug: true
+    }),
+  });
+  const data = await res.json();
+  console.log('Edge function response:', JSON.stringify(data, null, 2));
+  
+  // Step 4: Try list_fields to see if boundary comes in field list
+  console.log('Calling jdoc_data list_fields to check if boundaries are in field data...');
+  const res2 = await fetch('https://dkmfjtfdfuuouhcuhoer.supabase.co/functions/v1/jdoc_data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': 'sb_publishable_wSJWe5ieVE7vXFnRKtUjcw_6K_V74z8' },
+    body: JSON.stringify({ action: 'list_fields', org_id: ORG_ID }),
+  });
+  const data2 = await res2.json();
+  const fields = data2.fields || [];
+  console.log('Total fields from JD:', fields.length);
+  if(fields.length > 0) {
+    console.log('First field keys:', Object.keys(fields[0]));
+    console.log('First field sample:', JSON.stringify(fields[0], null, 2));
+    const withBoundary = fields.filter(f => f.boundary_geojson);
+    const withGeometry = fields.filter(f => f.geometry);
+    const withBoundaryProp = fields.filter(f => f.boundary);
+    console.log('Fields with boundary_geojson:', withBoundary.length);
+    console.log('Fields with geometry:', withGeometry.length);  
+    console.log('Fields with boundary:', withBoundaryProp.length);
+  }
+  
+  console.log('=== END DIAGNOSTIC ===');
+  console.log('Paste this full output to share with developer');
+};
+console.log('V35: Run window.debugJDBoundary() in console to diagnose boundary issue');
 </script>
 
 </body>
